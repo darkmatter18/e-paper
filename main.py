@@ -36,7 +36,6 @@ def main():
         y1 = (epd.height - total_height) // 2
         y2 = y1 + h1 + spacing
 
-        draw.text(((epd.width - w1) // 2, y1), line1, font=font, fill=0)
         draw.text(((epd.width - w2) // 2, y2), line2, font=font, fill=0)
 
         # Draw a cat at the bottom right
@@ -90,7 +89,38 @@ def main():
         for i in range(0, epd.width, 60):
             draw.arc([i, 5, i + 40, 35], 0, 180, fill=0, width=2)
 
+        # Red channel layer
         Himage_Other = Image.new("1", (epd.width, epd.height), 255)
+        draw_red = ImageDraw.Draw(Himage_Other)
+
+        # Draw first name "Arkadip" in red
+        draw_red.text(((epd.width - w1) // 2, y1), line1, font=font, fill=0)
+
+        # Add red hearts on the left side
+        for i in range(2):
+            heart_y = 150 + i * 150
+            heart_x = 15
+            # Simple heart shape using circles and polygon
+            draw_red.ellipse([heart_x, heart_y, heart_x + 20, heart_y + 20], fill=0)
+            draw_red.ellipse([heart_x + 15, heart_y, heart_x + 35, heart_y + 20], fill=0)
+            draw_red.polygon([heart_x, heart_y + 15, heart_x + 17, heart_y + 35, heart_x + 35, heart_y + 15], fill=0)
+
+        # Add red stars on the right side
+        for i in range(2):
+            star_y = 120 + i * 140
+            star_x = epd.width - 60
+            draw_red.polygon([
+                star_x, star_y,
+                star_x + 5, star_y + 15,
+                star_x + 20, star_y + 15,
+                star_x + 8, star_y + 24,
+                star_x + 12, star_y + 40,
+                star_x, star_y + 30,
+                star_x - 12, star_y + 40,
+                star_x - 8, star_y + 24,
+                star_x - 20, star_y + 15,
+                star_x - 5, star_y + 15
+            ], outline=0, fill=0, width=2)
 
         epd.display(epd.getbuffer(Himage), epd.getbuffer(Himage_Other))
         time.sleep(2)
