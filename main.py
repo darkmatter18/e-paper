@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 
 from PIL import Image, ImageDraw, ImageFont
@@ -7,6 +8,7 @@ from lib.waveshare_epd import epd7in5b_V2
 
 logging.basicConfig(level=logging.DEBUG)
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def main():
     try:
@@ -19,14 +21,14 @@ def main():
         Himage = Image.new("1", (epd.width, epd.height), 255)
         draw = ImageDraw.Draw(Himage)
 
-        # font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 48)
+        font = ImageFont.truetype(os.path.join(BASE_DIR, "fonts", "HennyPenny-Regular.ttf"), 48)
 
         line1 = "Arkadip"
         line2 = "Bhattacharya"
         spacing = 10
 
-        bbox1 = draw.textbbox((0, 0), line1)
-        bbox2 = draw.textbbox((0, 0), line2)
+        bbox1 = draw.textbbox((0, 0), line1, font=font)
+        bbox2 = draw.textbbox((0, 0), line2, font=font)
         w1, h1 = bbox1[2] - bbox1[0], bbox1[3] - bbox1[1]
         w2, h2 = bbox2[2] - bbox2[0], bbox2[3] - bbox2[1]
 
@@ -34,8 +36,8 @@ def main():
         y1 = (epd.height - total_height) // 2
         y2 = y1 + h1 + spacing
 
-        draw.text(((epd.width - w1) // 2, y1), line1, fill=0)
-        draw.text(((epd.width - w2) // 2, y2), line2, fill=0)
+        draw.text(((epd.width - w1) // 2, y1), line1, font=font, fill=0)
+        draw.text(((epd.width - w2) // 2, y2), line2, font=font, fill=0)
 
         Himage_Other = Image.new("1", (epd.width, epd.height), 255)
 
