@@ -18,61 +18,125 @@ def main():
         epd.init()
         epd.Clear()
 
-        while True:
-            logging.info("Updating clock")
-            Himage = Image.new("1", (epd.width, epd.height), 255)
-            draw = ImageDraw.Draw(Himage)
+        # Load fonts once
+        try:
+            time_font = ImageFont.truetype(os.path.join(BASE_DIR, "fonts", "HennyPenny-Regular.ttf"), 120)
+            date_font = ImageFont.truetype(os.path.join(BASE_DIR, "fonts", "HennyPenny-Regular.ttf"), 40)
+        except Exception:
+            time_font = ImageFont.load_default()
+            date_font = ImageFont.load_default()
 
-            # Get current time
+        # Full image for initial display and periodic refresh
+        full_image = Image.new("1", (epd.width, epd.height), 255)
+        draw_full = ImageDraw.Draw(full_image)
+
+        # Draw static elements once (border and date)
+        draw_full.rectangle([10, 10, epd.width - 10, epd.height - 10], outline=0, width=3)
+
+        # Red channel layer (static decorations)
+        red_image = Image.new("1", (epd.width, epd.height), 255)
+        draw_red = ImageDraw.Draw(red_image)
+
+        # Corner decorations in red (static)
+        for corner_x in [30, epd.width - 50]:
+            for corner_y in [30, epd.height - 50]:
+                draw_red.ellipse([corner_x, corner_y, corner_x + 20, corner_y + 20], fill=0)
+
+        # Initialize for partial updates
+        epd.init_part()
+
+        last_time_str = ""
+        last_date_str = ""
+        last_minute = -1
+        update_count = 0
+
+        while True:
             now = datetime.now()
             time_str = now.strftime("%H:%M:%S")
             date_str = now.strftime("%A, %B %d, %Y")
 
-            # Load fonts
-            try:
-                time_font = ImageFont.truetype(os.path.join(BASE_DIR, "fonts", "HennyPenny-Regular.ttf"), 120)
-                date_font = ImageFont.truetype(os.path.join(BASE_DIR, "fonts", "HennyPenny-Regular.ttf"), 40)
-            except:
-                time_font = ImageFont.load_default()
-                date_font = ImageFont.load_default()
+            # Do a full refresh every minute or when date changes
+            if now.minute != last_minute or date_str != last_date_str:
+                logging.info("Full refresh - minute changed")
 
-            # Draw time centered
-            time_bbox = draw.textbbox((0, 0), time_str, font=time_font)
-            time_w = time_bbox[2] - time_bbox[0]
-            time_h = time_bbox[3] - time_bbox[1]
-            time_x = (epd.width - time_w) // 2
-            time_y = (epd.height - time_h) // 2 - 50
+                # Re-initialize for full refresh
+                epd.init()
 
-            draw.text((time_x, time_y), time_str, font=time_font, fill=0)
+                # Redraw everything
+                full_image = Image.new("1", (epd.width, epd.height), 255)
+                draw_full = ImageDraw.Draw(full_image)
+                draw_full.rectangle([10, 10, epd.width - 10, epd.height - 10], outline=0, width=3)
 
-            # Draw date below time
-            date_bbox = draw.textbbox((0, 0), date_str, font=date_font)
-            date_w = date_bbox[2] - date_bbox[0]
-            date_x = (epd.width - date_w) // 2
-            date_y = time_y + time_h + 30
+                # Calculate positions
+                time_bbox = draw_full.textbbox((0, 0), time_str, font=time_font)
+                time_w = time_bbox[2] - time_bbox[0]
+                time_h = time_bbox[3] - time_bbox[1]
+                time_x = (epd.width - time_w) // 2
+                time_y = (epd.height - time_h) // 2 - 50
 
-            draw.text((date_x, date_y), date_str, font=date_font, fill=0)
+                draw_full.text((time_x, time_y), time_str, font=time_font, fill=0)
 
-            # Draw decorative border
-            draw.rectangle([10, 10, epd.width - 10, epd.height - 10], outline=0, width=3)
+                date_bbox = draw_full.textbbox((0, 0), date_str, font=date_font)
+                date_w = date_bbox[2] - date_bbox[0]
+                date_x = (epd.width - date_w) // 2
+                date_y = time_y + time_h + 30
 
-            # Red channel layer with seconds indicator
-            Himage_Other = Image.new("1", (epd.width, epd.height), 255)
-            draw_red = ImageDraw.Draw(Himage_Other)
+                draw_full.text((date_x, date_y), date_str, font=date_font, fill=0)
 
-            # Draw seconds as a progress bar at the bottom
-            seconds = now.second
-            bar_width = int((epd.width - 40) * (seconds / 60))
-            draw_red.rectangle([20, epd.height - 30, 20 + bar_width, epd.height - 20], fill=0)
+                # Update red channel with progress bar
+                red_image = Image.new("1", (epd.width, epd.height), 255)
+                draw_red = ImageDraw.Draw(red_image)
 
-            # Corner decorations in red
-            for corner_x in [30, epd.width - 50]:
-                for corner_y in [30, epd.height - 50]:
-                    draw_red.ellipse([corner_x, corner_y, corner_x + 20, corner_y + 20], fill=0)
+                for corner_x in [30, epd.width - 50]:
+                    for corner_y in [30, epd.height - 50]:
+                        draw_red.ellipse([corner_x, corner_y, corner_x + 20, corner_y + 20], fill=0)
 
-            epd.display(epd.getbuffer(Himage), epd.getbuffer(Himage_Other))
+                seconds = now.second
+                bar_width = int((epd.width - 40) * (seconds / 60))
+                draw_red.rectangle([20, epd.height - 30, 20 + bar_width, epd.height - 20], fill=0)
 
-            # Update every second
+                epd.display(epd.getbuffer(full_image), epd.getbuffer(red_image))
+
+                # Re-initialize for partial updates
+                epd.init_part()
+
+                last_minute = now.minute
+                last_date_str = date_str
+                last_time_str = time_str
+
+            elif time_str != last_time_str:
+                # Partial update for seconds only
+                logging.info("Partial refresh - seconds changed")
+
+                # Create a small image for just the time area
+                time_bbox = draw_full.textbbox((0, 0), time_str, font=time_font)
+                time_w = time_bbox[2] - time_bbox[0]
+                time_h = time_bbox[3] - time_bbox[1]
+                time_x = (epd.width - time_w) // 2
+                time_y = (epd.height - time_h) // 2 - 50
+
+                # Add padding to the update region
+                padding = 10
+                region_x = max(0, time_x - padding)
+                region_y = max(0, time_y - padding)
+                region_w = int(min(epd.width, time_w + 2 * padding))
+                region_h = int(min(epd.height, time_h + 2 * padding))
+
+                # Create partial image
+                partial_image = Image.new("1", (region_w, region_h), 255)
+                draw_partial = ImageDraw.Draw(partial_image)
+                draw_partial.text((padding, padding), time_str, font=time_font, fill=0)
+
+                epd.display_Partial(epd.getbuffer(partial_image), region_x, region_y, region_x + region_w, region_y + region_h)
+
+                last_time_str = time_str
+                update_count += 1
+
+                # Reset partial flag every 10 updates to avoid ghosting
+                if update_count >= 10:
+                    epd.partFlag = 1
+                    update_count = 0
+
             time.sleep(1)
 
     except IOError as e:
