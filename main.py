@@ -1,6 +1,7 @@
 import logging
 import os
 import time
+from datetime import datetime
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -17,116 +18,62 @@ def main():
         epd.init()
         epd.Clear()
 
-        logging.info("Displaying name")
-        Himage = Image.new("1", (epd.width, epd.height), 255)
-        draw = ImageDraw.Draw(Himage)
+        while True:
+            logging.info("Updating clock")
+            Himage = Image.new("1", (epd.width, epd.height), 255)
+            draw = ImageDraw.Draw(Himage)
 
-        font = ImageFont.truetype(os.path.join(BASE_DIR, "fonts", "HennyPenny-Regular.ttf"), 72)
+            # Get current time
+            now = datetime.now()
+            time_str = now.strftime("%H:%M:%S")
+            date_str = now.strftime("%A, %B %d, %Y")
 
-        line1 = "Arkadip"
-        line2 = "Bhattacharya"
-        spacing = 10
+            # Load fonts
+            try:
+                time_font = ImageFont.truetype(os.path.join(BASE_DIR, "fonts", "HennyPenny-Regular.ttf"), 120)
+                date_font = ImageFont.truetype(os.path.join(BASE_DIR, "fonts", "HennyPenny-Regular.ttf"), 40)
+            except:
+                time_font = ImageFont.load_default()
+                date_font = ImageFont.load_default()
 
-        bbox1 = draw.textbbox((0, 0), line1, font=font)
-        bbox2 = draw.textbbox((0, 0), line2, font=font)
-        w1, h1 = bbox1[2] - bbox1[0], bbox1[3] - bbox1[1]
-        w2, h2 = bbox2[2] - bbox2[0], bbox2[3] - bbox2[1]
+            # Draw time centered
+            time_bbox = draw.textbbox((0, 0), time_str, font=time_font)
+            time_w = time_bbox[2] - time_bbox[0]
+            time_h = time_bbox[3] - time_bbox[1]
+            time_x = (epd.width - time_w) // 2
+            time_y = (epd.height - time_h) // 2 - 50
 
-        total_height = h1 + spacing + h2
-        y1 = (epd.height - total_height) // 2
-        y2 = y1 + h1 + spacing
+            draw.text((time_x, time_y), time_str, font=time_font, fill=0)
 
-        draw.text(((epd.width - w2) // 2, y2), line2, font=font, fill=0)
+            # Draw date below time
+            date_bbox = draw.textbbox((0, 0), date_str, font=date_font)
+            date_w = date_bbox[2] - date_bbox[0]
+            date_x = (epd.width - date_w) // 2
+            date_y = time_y + time_h + 30
 
-        # Draw a cat at the bottom right
-        cat_x = epd.width - 120
-        cat_y = epd.height - 120
+            draw.text((date_x, date_y), date_str, font=date_font, fill=0)
 
-        # Cat head
-        draw.ellipse([cat_x + 20, cat_y + 20, cat_x + 80, cat_y + 80], outline=0, fill=255, width=2)
+            # Draw decorative border
+            draw.rectangle([10, 10, epd.width - 10, epd.height - 10], outline=0, width=3)
 
-        # Cat ears
-        draw.polygon([cat_x + 25, cat_y + 30, cat_x + 20, cat_y + 10, cat_x + 35, cat_y + 25], outline=0, fill=255)
-        draw.polygon([cat_x + 65, cat_y + 25, cat_x + 80, cat_y + 10, cat_x + 75, cat_y + 30], outline=0, fill=255)
+            # Red channel layer with seconds indicator
+            Himage_Other = Image.new("1", (epd.width, epd.height), 255)
+            draw_red = ImageDraw.Draw(Himage_Other)
 
-        # Cat eyes
-        draw.ellipse([cat_x + 35, cat_y + 40, cat_x + 42, cat_y + 47], fill=0)
-        draw.ellipse([cat_x + 58, cat_y + 40, cat_x + 65, cat_y + 47], fill=0)
+            # Draw seconds as a progress bar at the bottom
+            seconds = now.second
+            bar_width = int((epd.width - 40) * (seconds / 60))
+            draw_red.rectangle([20, epd.height - 30, 20 + bar_width, epd.height - 20], fill=0)
 
-        # Cat nose
-        draw.polygon([cat_x + 50, cat_y + 55, cat_x + 47, cat_y + 60, cat_x + 53, cat_y + 60], fill=0)
+            # Corner decorations in red
+            for corner_x in [30, epd.width - 50]:
+                for corner_y in [30, epd.height - 50]:
+                    draw_red.ellipse([corner_x, corner_y, corner_x + 20, corner_y + 20], fill=0)
 
-        # Cat whiskers
-        draw.line([cat_x + 20, cat_y + 55, cat_x + 5, cat_y + 50], fill=0, width=1)
-        draw.line([cat_x + 20, cat_y + 60, cat_x + 5, cat_y + 60], fill=0, width=1)
-        draw.line([cat_x + 80, cat_y + 55, cat_x + 95, cat_y + 50], fill=0, width=1)
-        draw.line([cat_x + 80, cat_y + 60, cat_x + 95, cat_y + 60], fill=0, width=1)
+            epd.display(epd.getbuffer(Himage), epd.getbuffer(Himage_Other))
 
-        # Draw funky decorations on the sides
-        # Stars on the left
-        for i in range(3):
-            star_y = 100 + i * 120
-            draw.polygon([
-                20, star_y,
-                25, star_y + 15,
-                40, star_y + 15,
-                28, star_y + 24,
-                32, star_y + 40,
-                20, star_y + 30,
-                8, star_y + 40,
-                12, star_y + 24,
-                0, star_y + 15,
-                15, star_y + 15
-            ], outline=0, fill=255, width=2)
-
-        # Circles on the right
-        for i in range(3):
-            circle_y = 80 + i * 100
-            draw.ellipse([epd.width - 50, circle_y, epd.width - 20, circle_y + 30], outline=0, width=2)
-            draw.ellipse([epd.width - 43, circle_y + 7, epd.width - 27, circle_y + 23], fill=0)
-
-        # Top border decoration
-        for i in range(0, epd.width, 60):
-            draw.arc([i, 5, i + 40, 35], 0, 180, fill=0, width=2)
-
-        # Red channel layer
-        Himage_Other = Image.new("1", (epd.width, epd.height), 255)
-        draw_red = ImageDraw.Draw(Himage_Other)
-
-        # Draw first name "Arkadip" in red
-        draw_red.text(((epd.width - w1) // 2, y1), line1, font=font, fill=0)
-
-        # Add red hearts on the left side
-        for i in range(2):
-            heart_y = 150 + i * 150
-            heart_x = 15
-            # Simple heart shape using circles and polygon
-            draw_red.ellipse([heart_x, heart_y, heart_x + 20, heart_y + 20], fill=0)
-            draw_red.ellipse([heart_x + 15, heart_y, heart_x + 35, heart_y + 20], fill=0)
-            draw_red.polygon([heart_x, heart_y + 15, heart_x + 17, heart_y + 35, heart_x + 35, heart_y + 15], fill=0)
-
-        # Add red stars on the right side
-        for i in range(2):
-            star_y = 120 + i * 140
-            star_x = epd.width - 60
-            draw_red.polygon([
-                star_x, star_y,
-                star_x + 5, star_y + 15,
-                star_x + 20, star_y + 15,
-                star_x + 8, star_y + 24,
-                star_x + 12, star_y + 40,
-                star_x, star_y + 30,
-                star_x - 12, star_y + 40,
-                star_x - 8, star_y + 24,
-                star_x - 20, star_y + 15,
-                star_x - 5, star_y + 15
-            ], outline=0, fill=0, width=2)
-
-        epd.display(epd.getbuffer(Himage), epd.getbuffer(Himage_Other))
-        time.sleep(2)
-
-        logging.info("Goto Sleep...")
-        epd.sleep()
+            # Update every second
+            time.sleep(1)
 
     except IOError as e:
         logging.info(e)
