@@ -122,12 +122,27 @@ def main():
                 region_w = int(min(epd.width, time_w + 2 * padding))
                 region_h = int(min(epd.height, time_h + 2 * padding))
 
+                # Align region_x to 8-pixel boundary (required by display_Partial)
+                region_x = (region_x // 8) * 8
+                region_w = ((region_w + 7) // 8) * 8
+
                 # Create partial image
                 partial_image = Image.new("1", (region_w, region_h), 255)
                 draw_partial = ImageDraw.Draw(partial_image)
-                draw_partial.text((padding, padding), time_str, font=time_font, fill=0)
 
-                epd.display_Partial(epd.getbuffer(partial_image), region_x, region_y, region_x + region_w, region_y + region_h)
+                # Calculate text position within partial image
+                text_x_offset = time_x - region_x
+                text_y_offset = padding
+                draw_partial.text((text_x_offset, text_y_offset), time_str, font=time_font, fill=0)
+
+                # Convert partial image to buffer manually
+                partial_image = partial_image.convert('1')
+                buf = bytearray(partial_image.tobytes('raw'))
+                # Invert bytes (PIL: 0=black, 1=white; e-paper: 0=white, 1=black)
+                for i in range(len(buf)):
+                    buf[i] ^= 0xFF
+
+                epd.display_Partial(buf, region_x, region_y, region_x + region_w, region_y + region_h)
 
                 last_time_str = time_str
                 update_count += 1
