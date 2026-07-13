@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-def main():
+def name():
     try:
         epd = epd7in5b_V2.EPD()
         logging.info("init and Clear")
@@ -134,7 +134,3 @@ def main():
     except KeyboardInterrupt:
         logging.info("ctrl + c:")
         epd7in5b_V2.epdconfig.module_exit(cleanup=True)
-
-
-if __name__ == "__main__":
-    main()
