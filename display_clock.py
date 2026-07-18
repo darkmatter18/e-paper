@@ -65,12 +65,14 @@ def draw_minute_hand(draw, minute, fill=0, ox=0, oy=0):
 
 
 def to_buffer(image):
-    """Convert a mode-'1' image to an e-paper buffer (inverted bytes)."""
-    image = image.convert("1")
-    buf = bytearray(image.tobytes("raw"))
-    for i in range(len(buf)):
-        buf[i] ^= 0xFF
-    return buf
+    """Convert a mode-'1' image to an e-paper buffer for display_Partial.
+
+    Unlike display() (which inverts the black bytes itself at
+    epd7in5b_V2.py:209), display_Partial sends the buffer to RAM as-is. So the
+    bytes must already be in hardware polarity: 1=white, 0=black -- which is
+    exactly what PIL's mode-'1' tobytes() gives (white bit=1, black bit=0).
+    No inversion here."""
+    return bytearray(image.convert("1").tobytes("raw"))
 
 
 def full_refresh(epd, now):
