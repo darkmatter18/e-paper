@@ -1,11 +1,14 @@
 import logging
 import math
+import os
 import time
 from datetime import datetime
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 from lib.waveshare_epd import epd7in5b_V2
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -14,12 +17,16 @@ logging.basicConfig(level=logging.DEBUG)
 # Right half (400x480) is one panel.
 DISPLAY_W, DISPLAY_H = 800, 480
 
-# --- Clock geometry (upper-left quadrant: 400x240) ---
-CX, CY = 200, 120  # center of the clock face
-RADIUS = 100  # outer circle radius
-HOUR_LEN = 55  # hour hand length
-MIN_LEN = 87  # minute hand length
+# --- Clock geometry (left half of upper-left quadrant: 200x240) ---
+CX, CY = 100, 120  # center of the analog clock
+RADIUS = 90  # outer circle radius
+HOUR_LEN = 50  # hour hand length
+MIN_LEN = 78  # minute hand length
 HUB_R = 5  # center hub radius
+
+# --- Digital clock position (right half of upper-left quadrant) ---
+DIGI_X = 240  # left edge of digital text area
+DIGI_Y_START = 40  # top of first line
 
 # How often to do a full (flashing) refresh. Red only renders on a full
 # refresh, so this is when the red hour hand is redrawn.
@@ -81,6 +88,26 @@ def to_buffer(image):
     return bytearray(image.convert("1").tobytes("raw"))
 
 
+FONT_DIGI = ImageFont.truetype(
+    os.path.join(BASE_DIR, "fonts", "HennyPenny-Regular.ttf"), 52
+)
+
+
+def draw_digital(draw, now, ox=0, oy=0):
+    """Draw HH / MM / AM|PM stacked vertically in the right half of upper-left."""
+    hour_12 = now.hour % 12 or 12
+    ampm = "AM" if now.hour < 12 else "PM"
+    lines = [f"{hour_12:02d}", f"{now.minute:02d}", ampm]
+
+    y = DIGI_Y_START - oy
+    for text in lines:
+        bbox = draw.textbbox((0, 0), text, font=FONT_DIGI)
+        tw = bbox[2] - bbox[0]
+        x = DIGI_X + (120 - tw) // 2 - ox
+        draw.text((x, y), text, font=FONT_DIGI, fill=0)
+        y += 65
+
+
 def draw_dividers(draw):
     """Draw the layout divider lines: vertical center, horizontal left-half."""
     draw.line([400, 0, 400, 480], fill=0, width=2)
@@ -88,7 +115,7 @@ def draw_dividers(draw):
 
 
 def full_refresh(epd, now):
-    """Full refresh: clock in upper-left, dividers, RED hour hand."""
+    """Full refresh: analog + digital clock in upper-left, dividers, RED hour hand."""
     logging.info("Full refresh")
     epd.init()
 
@@ -97,6 +124,7 @@ def full_refresh(epd, now):
     draw_dividers(db)
     draw_static(db)
     draw_minute_hand(db, now.minute, fill=0)
+    draw_digital(db, now)
 
     red = Image.new("1", (epd.width, epd.height), 255)
     dr = ImageDraw.Draw(red)
@@ -106,27 +134,22 @@ def full_refresh(epd, now):
 
 
 def get_region_coords():
-    """Compute the clock-face partial-refresh region (8px aligned).
-    Clamped to the upper-left quadrant (0,0)-(400,240)."""
-    pad = 8
-    x0 = max(0, CX - RADIUS - pad)
-    y0 = max(0, CY - RADIUS - pad)
-    x1 = min(400, CX + RADIUS + pad)
-    y1 = min(240, CY + RADIUS + pad)
-    region_x = (x0 // 8) * 8
-    region_w = (((x1 - region_x) + 7) // 8) * 8
-    region_y = y0
-    region_h = y1 - y0
+    """The entire upper-left quadrant (0,0)-(400,240), 8px aligned."""
+    region_x = 0
+    region_y = 0
+    region_w = 400
+    region_h = 240
     return region_x, region_y, region_w, region_h
 
 
 def render_region(now, region_x, region_y, region_w, region_h):
-    """Draw the clock face into a partial-region image."""
+    """Draw analog + digital clock into a partial-region image."""
     region = Image.new("1", (region_w, region_h), 255)
     d = ImageDraw.Draw(region)
     draw_static(d, ox=region_x, oy=region_y)
     draw_hour_hand(d, now.hour, now.minute, fill=0, ox=region_x, oy=region_y)
     draw_minute_hand(d, now.minute, fill=0, ox=region_x, oy=region_y)
+    draw_digital(d, now, ox=region_x, oy=region_y)
     return region
 
 
