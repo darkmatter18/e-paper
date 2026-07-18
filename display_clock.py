@@ -17,7 +17,7 @@ MIN_LEN = 175              # minute hand length
 HUB_R = 8                  # center hub radius
 
 # How often to do a full (flashing) refresh. Red only renders on a full
-# refresh, so this is when the red minute hand + hour hand are redrawn.
+# refresh, so this is when the red hour hand is redrawn.
 # Between full refreshes the minute hand moves in black via partial refresh.
 FULL_REFRESH_MIN = 15
 
@@ -76,18 +76,18 @@ def to_buffer(image):
 
 
 def full_refresh(epd, now):
-    """Full refresh: static + black hour hand + RED minute hand."""
+    """Full refresh: static + black minute hand + RED hour hand."""
     logging.info("Full refresh")
     epd.init()
 
     black = Image.new("1", (epd.width, epd.height), 255)
     db = ImageDraw.Draw(black)
     draw_static(db)
-    draw_hour_hand(db, now.hour, now.minute, fill=0)
+    draw_minute_hand(db, now.minute, fill=0)
 
     red = Image.new("1", (epd.width, epd.height), 255)
     dr = ImageDraw.Draw(red)
-    draw_minute_hand(dr, now.minute, fill=0)
+    draw_hour_hand(dr, now.hour, now.minute, fill=0)
 
     epd.display(epd.getbuffer(black), epd.getbuffer(red))
 
