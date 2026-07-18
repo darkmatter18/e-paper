@@ -92,23 +92,75 @@ FONT_DIGI = ImageFont.truetype(
 )
 
 
-def draw_digital(draw, now, ox=0, oy=0):
-    """Draw HH / MM / AM|PM stacked vertically in the right half of upper-left."""
+FONT_DIGI_SM = ImageFont.truetype(
+    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 36
+)
+
+
+def draw_digital(draw, now, ox=0, oy=0, red_draw=None):
+    """Draw HH / MM / AM|PM stacked vertically in the right half of upper-left.
+    Hour is drawn on red_draw (red channel) if provided."""
     hour_12 = now.hour % 12 or 12
     ampm = "AM" if now.hour < 12 else "PM"
-    lines = [f"{hour_12:02d}", f"{now.minute:02d}", ampm]
 
     line_spacing = 65
-    total_h = len(lines) * line_spacing - (line_spacing - 52)
+    total_h = 3 * line_spacing - (line_spacing - 52)
     y_start = (240 - total_h) // 2
 
+    lines = [
+        (f"{hour_12:02d}", FONT_DIGI, red_draw or draw),
+        (f"{now.minute:02d}", FONT_DIGI, draw),
+        (ampm, FONT_DIGI_SM, draw),
+    ]
+
     y = y_start - oy
-    for text in lines:
-        bbox = draw.textbbox((0, 0), text, font=FONT_DIGI)
+    for text, font, target in lines:
+        bbox = target.textbbox((0, 0), text, font=font)
         tw = bbox[2] - bbox[0]
         x = DIGI_X + (120 - tw) // 2 - ox
-        draw.text((x, y), text, font=FONT_DIGI, fill=0)
+        target.text((x, y), text, font=font, fill=0)
         y += line_spacing
+
+
+def draw_decorations(draw, ox=0, oy=0):
+    """Small artistic touches around the upper-left quadrant."""
+    # Dot ring around the analog clock
+    for i in range(60):
+        angle = 2 * math.pi * (i / 60)
+        r = RADIUS + 8
+        x = CX + r * math.sin(angle) - ox
+        y = CY - r * math.cos(angle) - oy
+        if i % 5 == 0:
+            draw.ellipse([x - 2, y - 2, x + 2, y + 2], fill=0)
+        else:
+            draw.point((x, y), fill=0)
+
+    # Small separator dots between digital lines
+    dot_x = DIGI_X + 60 - ox
+    line_spacing = 65
+    total_h = 3 * line_spacing - (line_spacing - 52)
+    y_start = (240 - total_h) // 2
+    for i in range(2):
+        dot_y = y_start + 52 + i * line_spacing + 4 - oy
+        draw.ellipse([dot_x - 3, dot_y, dot_x + 3, dot_y + 6], fill=0)
+
+    # Corner flourishes in upper-left quadrant
+    for cx, cy in [(12, 12), (388, 12), (12, 228), (388, 228)]:
+        cx -= ox
+        cy -= oy
+        draw.arc([cx - 8, cy - 8, cx + 8, cy + 8], 0, 360, fill=0, width=2)
+        draw.point((cx, cy), fill=0)
+
+
+def draw_red_decorations(draw, ox=0, oy=0):
+    """Red accent elements for the upper-left quadrant."""
+    # Small red diamond below the analog clock
+    dx, dy = CX - ox, CY + RADIUS + 14 - oy
+    draw.polygon([dx, dy - 5, dx + 5, dy, dx, dy + 5, dx - 5, dy], fill=0)
+
+    # Red accent line flanking the digital area
+    lx = DIGI_X - 12 - ox
+    draw.line([lx, 50 - oy, lx, 190 - oy], fill=0, width=2)
 
 
 def draw_dividers(draw):
@@ -127,11 +179,13 @@ def full_refresh(epd, now):
     draw_dividers(db)
     draw_static(db)
     draw_minute_hand(db, now.minute, fill=0)
-    draw_digital(db, now)
+    draw_decorations(db)
 
     red = Image.new("1", (epd.width, epd.height), 255)
     dr = ImageDraw.Draw(red)
     draw_hour_hand(dr, now.hour, now.minute, fill=0)
+    draw_digital(db, now, red_draw=dr)
+    draw_red_decorations(dr)
 
     epd.display(epd.getbuffer(black), epd.getbuffer(red))
 
@@ -153,6 +207,7 @@ def render_region(now, region_x, region_y, region_w, region_h):
     draw_hour_hand(d, now.hour, now.minute, fill=0, ox=region_x, oy=region_y)
     draw_minute_hand(d, now.minute, fill=0, ox=region_x, oy=region_y)
     draw_digital(d, now, ox=region_x, oy=region_y)
+    draw_decorations(d, ox=region_x, oy=region_y)
     return region
 
 
