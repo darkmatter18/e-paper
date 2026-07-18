@@ -9,12 +9,17 @@ from lib.waveshare_epd import epd7in5b_V2
 
 logging.basicConfig(level=logging.DEBUG)
 
-# --- Clock geometry (display is 800x480) ---
-CX, CY = 400, 240          # center of the clock face
-RADIUS = 200               # outer circle radius
-HOUR_LEN = 110             # hour hand length
-MIN_LEN = 175              # minute hand length
-HUB_R = 8                  # center hub radius
+# --- Layout: 800x480 split into regions ---
+# Left half (400x480) split into upper (400x240) and lower (400x240).
+# Right half (400x480) is one panel.
+DISPLAY_W, DISPLAY_H = 800, 480
+
+# --- Clock geometry (upper-left quadrant: 400x240) ---
+CX, CY = 200, 120  # center of the clock face
+RADIUS = 100  # outer circle radius
+HOUR_LEN = 55  # hour hand length
+MIN_LEN = 87  # minute hand length
+HUB_R = 5  # center hub radius
 
 # How often to do a full (flashing) refresh. Red only renders on a full
 # refresh, so this is when the red hour hand is redrawn.
@@ -34,7 +39,8 @@ def draw_static(draw, ox=0, oy=0):
     """Clock face: outer circle, tick marks, center hub. Black."""
     draw.ellipse(
         [CX - RADIUS - ox, CY - RADIUS - oy, CX + RADIUS - ox, CY + RADIUS - oy],
-        outline=0, width=4,
+        outline=0,
+        width=4,
     )
     for i in range(12):
         angle = 2 * math.pi * (i / 12)
@@ -75,13 +81,20 @@ def to_buffer(image):
     return bytearray(image.convert("1").tobytes("raw"))
 
 
+def draw_dividers(draw):
+    """Draw the layout divider lines: vertical center, horizontal left-half."""
+    draw.line([400, 0, 400, 480], fill=0, width=2)
+    draw.line([0, 240, 400, 240], fill=0, width=2)
+
+
 def full_refresh(epd, now):
-    """Full refresh: static + black minute hand + RED hour hand."""
+    """Full refresh: clock in upper-left, dividers, RED hour hand."""
     logging.info("Full refresh")
     epd.init()
 
     black = Image.new("1", (epd.width, epd.height), 255)
     db = ImageDraw.Draw(black)
+    draw_dividers(db)
     draw_static(db)
     draw_minute_hand(db, now.minute, fill=0)
 
@@ -93,12 +106,13 @@ def full_refresh(epd, now):
 
 
 def get_region_coords():
-    """Compute the clock-face partial-refresh region (8px aligned)."""
-    pad = 12
-    x0 = CX - RADIUS - pad
-    y0 = CY - RADIUS - pad
-    x1 = CX + RADIUS + pad
-    y1 = CY + RADIUS + pad
+    """Compute the clock-face partial-refresh region (8px aligned).
+    Clamped to the upper-left quadrant (0,0)-(400,240)."""
+    pad = 8
+    x0 = max(0, CX - RADIUS - pad)
+    y0 = max(0, CY - RADIUS - pad)
+    x1 = min(400, CX + RADIUS + pad)
+    y1 = min(240, CY + RADIUS + pad)
     region_x = (x0 // 8) * 8
     region_w = (((x1 - region_x) + 7) // 8) * 8
     region_y = y0
@@ -116,7 +130,9 @@ def render_region(now, region_x, region_y, region_w, region_h):
     return region
 
 
-def partial_refresh_with_old(epd, old_buf, new_buf, region_x, region_y, region_w, region_h):
+def partial_refresh_with_old(
+    epd, old_buf, new_buf, region_x, region_y, region_w, region_h
+):
     """Partial refresh that sends the previous frame as the 'old' buffer so
     the controller knows which pixels to erase."""
     from lib.waveshare_epd import epdconfig
@@ -177,12 +193,16 @@ def clock():
 
             if do_full:
                 full_refresh(epd, now)
-                prev_buf = to_buffer(render_region(now, region_x, region_y, region_w, region_h))
+                prev_buf = to_buffer(
+                    render_region(now, region_x, region_y, region_w, region_h)
+                )
             else:
                 epd.init_part()
                 new_region = render_region(now, region_x, region_y, region_w, region_h)
                 new_buf = to_buffer(new_region)
-                partial_refresh_with_old(epd, prev_buf, new_buf, region_x, region_y, region_w, region_h)
+                partial_refresh_with_old(
+                    epd, prev_buf, new_buf, region_x, region_y, region_w, region_h
+                )
                 prev_buf = new_buf
 
             last_minute = now.minute
