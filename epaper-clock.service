@@ -1,0 +1,13 @@
+[Unit]
+Description=E-Paper Clock
+After=network.target
+
+[Service]
+WorkingDirectory=/home/arkadip/e-paper
+ExecStart=uv run python -m main
+Restart=on-failure
+RestartSec=5
+User=pi
+
+[Install]
+WantedBy=multi-user.target
