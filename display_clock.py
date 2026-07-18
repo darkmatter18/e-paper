@@ -33,13 +33,14 @@ DIGI_X = 240  # left edge of digital text area
 FULL_REFRESH_MIN = 15
 
 FONT_DATE_DAY = ImageFont.truetype(
-    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 44
+    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 60
 )
 FONT_DATE_NUM = ImageFont.truetype(
     os.path.join(BASE_DIR, "fonts", "HennyPenny-Regular.ttf"), 72
 )
+
 FONT_DATE_MY = ImageFont.truetype(
-    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 30
+    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 44
 )
 
 FONT_DIGI = ImageFont.truetype(
@@ -132,7 +133,7 @@ def draw_digital(draw, now, ox=0, oy=0, red_draw=None):
 
 
 def draw_decorations(draw, ox=0, oy=0):
-    """Small artistic touches around the upper-left quadrant."""
+    """Artistic touches around the upper-left quadrant."""
     # Dot ring around the analog clock
     for i in range(60):
         angle = 2 * math.pi * (i / 60)
@@ -153,12 +154,38 @@ def draw_decorations(draw, ox=0, oy=0):
         dot_y = y_start + 52 + i * line_spacing + 4 - oy
         draw.ellipse([dot_x - 3, dot_y, dot_x + 3, dot_y + 6], fill=0)
 
-    # Corner flourishes in upper-left quadrant
-    for cx, cy in [(12, 12), (388, 12), (12, 228), (388, 228)]:
+    # Corner flourishes in upper-left quadrant — L-shaped brackets
+    for cx, cy, sx, sy in [(8, 8, 1, 1), (392, 8, -1, 1), (8, 232, 1, -1), (392, 232, -1, -1)]:
         cx -= ox
         cy -= oy
-        draw.arc([cx - 8, cy - 8, cx + 8, cy + 8], 0, 360, fill=0, width=2)
-        draw.point((cx, cy), fill=0)
+        draw.line([cx, cy, cx + sx * 20, cy], fill=0, width=2)
+        draw.line([cx, cy, cx, cy + sy * 20], fill=0, width=2)
+
+    # Ornamental brackets flanking the digital time
+    bx_l = DIGI_X - 20 - ox
+    bx_r = DIGI_X + 140 - ox
+    bt = y_start + 5 - oy
+    bb = y_start + total_h - 5 - oy
+    draw.arc([bx_l - 5, bt, bx_l + 15, bb], 90, 270, fill=0, width=2)
+    draw.arc([bx_r - 15, bt, bx_r + 5, bb], 270, 90, fill=0, width=2)
+
+    # Sun/moon indicator based on hour (drawn near top-center of quadrant)
+    icon_x = 200 - ox
+    icon_y = 16 - oy
+    now_h = datetime.now().hour
+    if 6 <= now_h < 18:
+        # Sun — circle with rays
+        draw.ellipse([icon_x - 6, icon_y - 6, icon_x + 6, icon_y + 6], outline=0, width=2)
+        for i in range(8):
+            a = 2 * math.pi * (i / 8)
+            draw.line([
+                icon_x + 9 * math.cos(a), icon_y + 9 * math.sin(a),
+                icon_x + 13 * math.cos(a), icon_y + 13 * math.sin(a),
+            ], fill=0, width=1)
+    else:
+        # Moon — crescent
+        draw.ellipse([icon_x - 8, icon_y - 8, icon_x + 8, icon_y + 8], fill=0)
+        draw.ellipse([icon_x - 3, icon_y - 8, icon_x + 11, icon_y + 8], fill=255)
 
 
 def draw_red_decorations(draw, ox=0, oy=0):
@@ -170,6 +197,68 @@ def draw_red_decorations(draw, ox=0, oy=0):
     # Red accent line flanking the digital area
     lx = DIGI_X - 12 - ox
     draw.line([lx, 50 - oy, lx, 190 - oy], fill=0, width=2)
+
+    # Red dots at the quarter-hour positions on the outer ring
+    for i in [0, 15, 30, 45]:
+        angle = 2 * math.pi * (i / 60)
+        r = RADIUS + 8
+        x = CX + r * math.sin(angle) - ox
+        y = CY - r * math.cos(angle) - oy
+        draw.ellipse([x - 3, y - 3, x + 3, y + 3], fill=0)
+
+    # Small red stars at top corners of upper-left quadrant
+    for sx, sy in [(25 - ox, 22 - oy), (375 - ox, 22 - oy)]:
+        _draw_star(draw, sx, sy, 6, 3)
+
+
+def _draw_star(draw, cx, cy, outer_r, inner_r, points=5):
+    """Draw a small filled star."""
+    coords = []
+    for i in range(points * 2):
+        r = outer_r if i % 2 == 0 else inner_r
+        angle = math.pi * i / points - math.pi / 2
+        coords.append(cx + r * math.cos(angle))
+        coords.append(cy + r * math.sin(angle))
+    draw.polygon(coords, fill=0)
+
+
+def draw_date_decorations(draw):
+    """Black decorations for the bottom-left date quadrant."""
+    qx, qy, qw = 0, 240, 400
+
+    # Scalloped top border
+    for i in range(0, qw, 30):
+        draw.arc([qx + i + 2, qy + 8, qx + i + 28, qy + 28], 0, 180, fill=0, width=2)
+
+    # Scalloped bottom border
+    for i in range(0, qw, 30):
+        draw.arc([qx + i + 2, 480 - 28, qx + i + 28, 480 - 8], 180, 360, fill=0, width=2)
+
+    # Small diamond separators flanking the date text
+    for dx in [60, 340]:
+        dy = qy + 150
+        draw.polygon([dx, dy - 4, dx + 4, dy, dx, dy + 4, dx - 4, dy], fill=0)
+
+    # Dotted horizontal rules above and below text area
+    for y in [qy + 55, qy + 200]:
+        for x in range(30, 370, 8):
+            draw.ellipse([x, y, x + 2, y + 2], fill=0)
+
+
+def draw_date_red_decorations(draw):
+    """Red decorations for the bottom-left date quadrant."""
+    qy = 240
+
+    # Red hearts flanking the weekday
+    for hx in [35, 355]:
+        hy = qy + 82
+        draw.ellipse([hx - 6, hy - 6, hx, hy], fill=0)
+        draw.ellipse([hx, hy - 6, hx + 6, hy], fill=0)
+        draw.polygon([hx - 6, hy - 2, hx, hy + 7, hx + 6, hy - 2], fill=0)
+
+    # Red corner dots in bottom-left quadrant
+    for cx, cy in [(15, 255), (385, 255), (15, 465), (385, 465)]:
+        draw.ellipse([cx - 4, cy - 4, cx + 4, cy + 4], fill=0)
 
 
 def draw_date(draw, now, red_draw=None):
@@ -210,12 +299,16 @@ def full_refresh(epd, now):
     draw_minute_hand(db, now.minute, fill=0)
     draw_decorations(db)
 
+    draw_date(db, now)
+    draw_date_decorations(db)
+
     red = Image.new("1", (epd.width, epd.height), 255)
     dr = ImageDraw.Draw(red)
     draw_hour_hand(dr, now.hour, now.minute, fill=0)
     draw_digital(db, now, red_draw=dr)
     draw_red_decorations(dr)
     draw_date(db, now, red_draw=dr)
+    draw_date_red_decorations(dr)
 
     epd.display(epd.getbuffer(black), epd.getbuffer(red))
 
