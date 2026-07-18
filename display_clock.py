@@ -32,6 +32,24 @@ DIGI_X = 240  # left edge of digital text area
 # Between full refreshes the minute hand moves in black via partial refresh.
 FULL_REFRESH_MIN = 15
 
+FONT_DATE_DAY = ImageFont.truetype(
+    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 44
+)
+FONT_DATE_NUM = ImageFont.truetype(
+    os.path.join(BASE_DIR, "fonts", "HennyPenny-Regular.ttf"), 72
+)
+FONT_DATE_MY = ImageFont.truetype(
+    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 30
+)
+
+FONT_DIGI = ImageFont.truetype(
+    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 52
+)
+
+FONT_DIGI_SM = ImageFont.truetype(
+    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 36
+)
+
 
 def hand_endpoint(length, value, total):
     """Point at the tip of a hand. 12 o'clock is up, sweeping clockwise."""
@@ -86,15 +104,6 @@ def to_buffer(image):
     No inversion here."""
     return bytearray(image.convert("1").tobytes("raw"))
 
-
-FONT_DIGI = ImageFont.truetype(
-    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 52
-)
-
-
-FONT_DIGI_SM = ImageFont.truetype(
-    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 36
-)
 
 
 def draw_digital(draw, now, ox=0, oy=0, red_draw=None):
@@ -163,6 +172,26 @@ def draw_red_decorations(draw, ox=0, oy=0):
     draw.line([lx, 50 - oy, lx, 190 - oy], fill=0, width=2)
 
 
+def draw_date(draw, now, red_draw=None):
+    """Draw date in the bottom-left quadrant (0,240)-(400,480).
+    Layout: day-of-week on one line, full date on the next."""
+    qx, qy, qw = 0, 240, 400
+
+    day_name = now.strftime("%A")
+    date_str = now.strftime("%d %B %Y")
+
+    # Day of week (centered)
+    bbox = draw.textbbox((0, 0), day_name, font=FONT_DATE_DAY)
+    tw = bbox[2] - bbox[0]
+    draw.text(((qw - tw) // 2 + qx, qy + 70), day_name, font=FONT_DATE_DAY, fill=0)
+
+    # Full date (red if red_draw provided)
+    target = red_draw or draw
+    bbox = target.textbbox((0, 0), date_str, font=FONT_DATE_MY)
+    tw = bbox[2] - bbox[0]
+    target.text(((qw - tw) // 2 + qx, qy + 130), date_str, font=FONT_DATE_MY, fill=0)
+
+
 def draw_dividers(draw):
     """Draw the layout divider lines: vertical center, horizontal left-half."""
     draw.line([400, 0, 400, 480], fill=0, width=2)
@@ -186,6 +215,7 @@ def full_refresh(epd, now):
     draw_hour_hand(dr, now.hour, now.minute, fill=0)
     draw_digital(db, now, red_draw=dr)
     draw_red_decorations(dr)
+    draw_date(db, now, red_draw=dr)
 
     epd.display(epd.getbuffer(black), epd.getbuffer(red))
 
