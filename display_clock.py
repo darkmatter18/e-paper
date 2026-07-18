@@ -26,7 +26,6 @@ HUB_R = 5  # center hub radius
 
 # --- Digital clock position (right half of upper-left quadrant) ---
 DIGI_X = 240  # left edge of digital text area
-DIGI_Y_START = 40  # top of first line
 
 # How often to do a full (flashing) refresh. Red only renders on a full
 # refresh, so this is when the red hour hand is redrawn.
@@ -89,7 +88,7 @@ def to_buffer(image):
 
 
 FONT_DIGI = ImageFont.truetype(
-    os.path.join(BASE_DIR, "fonts", "HennyPenny-Regular.ttf"), 52
+    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 52
 )
 
 
@@ -99,13 +98,17 @@ def draw_digital(draw, now, ox=0, oy=0):
     ampm = "AM" if now.hour < 12 else "PM"
     lines = [f"{hour_12:02d}", f"{now.minute:02d}", ampm]
 
-    y = DIGI_Y_START - oy
+    line_spacing = 65
+    total_h = len(lines) * line_spacing - (line_spacing - 52)
+    y_start = (240 - total_h) // 2
+
+    y = y_start - oy
     for text in lines:
         bbox = draw.textbbox((0, 0), text, font=FONT_DIGI)
         tw = bbox[2] - bbox[0]
         x = DIGI_X + (120 - tw) // 2 - ox
         draw.text((x, y), text, font=FONT_DIGI, fill=0)
-        y += 65
+        y += line_spacing
 
 
 def draw_dividers(draw):
