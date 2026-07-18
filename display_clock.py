@@ -92,36 +92,61 @@ def full_refresh(epd, now):
     epd.display(epd.getbuffer(black), epd.getbuffer(red))
 
 
-def partial_refresh(epd, now):
-    """Black-only partial refresh of the clock face: redraw static + both
-    hands in black so the old minute hand is erased and the new one drawn.
-    The red hour hand from the last full refresh lingers until the next one."""
-    logging.info("Partial refresh - minute changed")
-    epd.init_part()
-    epd.partFlag = 1
-
+def get_region_coords():
+    """Compute the clock-face partial-refresh region (8px aligned)."""
     pad = 12
     x0 = CX - RADIUS - pad
     y0 = CY - RADIUS - pad
     x1 = CX + RADIUS + pad
     y1 = CY + RADIUS + pad
-
-    # display_Partial needs the X range aligned to 8-pixel (byte) boundaries.
     region_x = (x0 // 8) * 8
     region_w = (((x1 - region_x) + 7) // 8) * 8
     region_y = y0
     region_h = y1 - y0
+    return region_x, region_y, region_w, region_h
 
+
+def render_region(now, region_x, region_y, region_w, region_h):
+    """Draw the clock face into a partial-region image."""
     region = Image.new("1", (region_w, region_h), 255)
     d = ImageDraw.Draw(region)
     draw_static(d, ox=region_x, oy=region_y)
     draw_hour_hand(d, now.hour, now.minute, fill=0, ox=region_x, oy=region_y)
     draw_minute_hand(d, now.minute, fill=0, ox=region_x, oy=region_y)
+    return region
 
-    epd.display_Partial(
-        to_buffer(region),
-        region_x, region_y, region_x + region_w, region_y + region_h,
-    )
+
+def partial_refresh_with_old(epd, old_buf, new_buf, region_x, region_y, region_w, region_h):
+    """Partial refresh that sends the previous frame as the 'old' buffer so
+    the controller knows which pixels to erase."""
+    from lib.waveshare_epd import epdconfig
+
+    Xstart = region_x
+    Ystart = region_y
+    Xend = region_x + region_w
+    Yend = region_y + region_h
+
+    epd.send_command(0x91)
+    epd.send_command(0x90)
+    epd.send_data(Xstart // 256)
+    epd.send_data(Xstart % 256)
+    epd.send_data((Xend - 1) // 256)
+    epd.send_data((Xend - 1) % 256)
+    epd.send_data(Ystart // 256)
+    epd.send_data(Ystart % 256)
+    epd.send_data((Yend - 1) // 256)
+    epd.send_data((Yend - 1) % 256)
+    epd.send_data(0x01)
+
+    epd.send_command(0x10)
+    epd.send_data2(old_buf)
+
+    epd.send_command(0x13)
+    epd.send_data2(new_buf)
+
+    epd.send_command(0x12)
+    epdconfig.delay_ms(100)
+    epd.ReadBusy()
 
 
 def clock():
@@ -131,9 +156,11 @@ def clock():
         epd.init()
         epd.Clear()
 
+        region_x, region_y, region_w, region_h = get_region_coords()
         last_minute = -1
         last_hour = -1
         force_full = True
+        prev_buf = None
 
         while True:
             now = datetime.now()
@@ -150,8 +177,13 @@ def clock():
 
             if do_full:
                 full_refresh(epd, now)
+                prev_buf = to_buffer(render_region(now, region_x, region_y, region_w, region_h))
             else:
-                partial_refresh(epd, now)
+                epd.init_part()
+                new_region = render_region(now, region_x, region_y, region_w, region_h)
+                new_buf = to_buffer(new_region)
+                partial_refresh_with_old(epd, prev_buf, new_buf, region_x, region_y, region_w, region_h)
+                prev_buf = new_buf
 
             last_minute = now.minute
             last_hour = now.hour
