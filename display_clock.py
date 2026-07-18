@@ -91,16 +91,14 @@ def full_refresh(epd, now):
 
     epd.display(epd.getbuffer(black), epd.getbuffer(red))
 
-    # Switch to partial mode for subsequent minute updates.
-    epd.init_part()
-    epd.partFlag = 1
-
 
 def partial_refresh(epd, now):
     """Black-only partial refresh of the clock face: redraw static + both
     hands in black so the old minute hand is erased and the new one drawn.
-    The red minute hand from the last full refresh lingers until the next one."""
+    The red hour hand from the last full refresh lingers until the next one."""
     logging.info("Partial refresh - minute changed")
+    epd.init_part()
+    epd.partFlag = 1
 
     pad = 12
     x0 = CX - RADIUS - pad
@@ -159,7 +157,10 @@ def clock():
             last_hour = now.hour
             force_full = False
 
-            time.sleep(1)
+            epd.sleep()
+
+            seconds_left = 60 - datetime.now().second
+            time.sleep(seconds_left)
 
     except IOError as e:
         logging.info(e)
