@@ -1,10 +1,22 @@
 # E Paper
 
-## SYNC PROJECT
+## Setup
+
+1. Install dependencies:
 
 ```bash
 uv sync
 ```
+
+2. Create `.env` file with your API keys and location:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and add:
+- `OPENWEATHER_API_KEY`: Get from [OpenWeatherMap](https://openweathermap.org/api)
+- `LATITUDE` and `LONGITUDE`: Your location coordinates
 
 ## Run project
 
