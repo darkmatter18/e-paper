@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 WorkingDirectory=/home/arkadip/e-paper
-ExecStart=uv run python -m main
+ExecStart=/home/arkadip/e-paper/.venv/bin/python -m main
 Restart=on-failure
 RestartSec=5
 User=arkadip
