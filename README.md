@@ -15,6 +15,7 @@ cp .env.example .env
 ```
 
 Edit `.env` and add:
+
 - `OPENWEATHER_API_KEY`: Get from [OpenWeatherMap](https://openweathermap.org/api)
 - `LATITUDE` and `LONGITUDE`: Your location coordinates
 

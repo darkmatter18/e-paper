@@ -4,10 +4,14 @@ import os
 import time
 from datetime import datetime
 
+from dotenv import load_dotenv
 from PIL import Image, ImageDraw, ImageFont
 
 from lib.waveshare_epd import epd7in5b_V2
-from services.quote import QuoteService, ZenQuotesService
+from services.quote import ZenQuotesService
+from services.weather import OpenWeatherMapService
+
+load_dotenv()
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -59,6 +63,18 @@ FONT_QUOTE_TEXT = ImageFont.truetype(
 
 FONT_QUOTE_AUTHOR = ImageFont.truetype(
     os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 24
+)
+
+FONT_WEATHER_TEMP = ImageFont.truetype(
+    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 28
+)
+
+FONT_WEATHER_DAY = ImageFont.truetype(
+    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 18
+)
+
+FONT_WEATHER_LABEL = ImageFont.truetype(
+    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 22
 )
 
 
@@ -321,79 +337,202 @@ def wrap_text(text, font, max_width, draw):
     return lines
 
 
+def draw_weather_icon(draw, icon_code, cx, cy):
+    """Draw simplified weather icon based on OpenWeatherMap icon code."""
+    # Icon codes: 01d/01n=clear, 02d/02n=few clouds, 03d/03n=clouds,
+    #             04d/04n=broken clouds, 09d/09n=rain, 10d/10n=rain,
+    #             11d/11n=thunderstorm, 13d/13n=snow, 50d/50n=mist
+
+    icon_base = icon_code[:2] if len(icon_code) >= 2 else "01"
+
+    if icon_base == "01":  # Clear sky - sun
+        draw.ellipse([cx - 8, cy - 8, cx + 8, cy + 8], outline=0, width=2)
+        for i in range(8):
+            angle = 2 * math.pi * i / 8
+            x1 = cx + 12 * math.cos(angle)
+            y1 = cy + 12 * math.sin(angle)
+            x2 = cx + 16 * math.cos(angle)
+            y2 = cy + 16 * math.sin(angle)
+            draw.line([x1, y1, x2, y2], fill=0, width=2)
+    elif icon_base in ["02", "03", "04"]:  # Clouds
+        draw.ellipse([cx - 12, cy - 6, cx - 2, cy + 4], fill=0)
+        draw.ellipse([cx - 6, cy - 8, cx + 6, cy + 2], fill=0)
+        draw.ellipse([cx + 2, cy - 6, cx + 12, cy + 4], fill=0)
+    elif icon_base in ["09", "10"]:  # Rain
+        draw.ellipse([cx - 10, cy - 8, cx + 10, cy], fill=0)
+        for i in range(3):
+            x = cx - 6 + i * 6
+            draw.line([x, cy + 2, x, cy + 10], fill=0, width=2)
+    elif icon_base == "11":  # Thunderstorm
+        draw.ellipse([cx - 10, cy - 8, cx + 10, cy], fill=0)
+        draw.polygon([cx, cy + 2, cx - 6, cy + 8, cx - 2, cy + 8,
+                     cx - 4, cy + 12, cx + 4, cy + 4, cx, cy + 4], fill=0)
+    elif icon_base == "13":  # Snow
+        for i in range(6):
+            angle = math.pi * i / 3
+            x1 = cx + 10 * math.cos(angle)
+            y1 = cy + 10 * math.sin(angle)
+            draw.line([cx, cy, x1, y1], fill=0, width=2)
+        draw.ellipse([cx - 3, cy - 3, cx + 3, cy + 3], fill=0)
+    else:  # Mist/fog
+        for i in range(3):
+            y = cy - 6 + i * 6
+            draw.line([cx - 10, y, cx + 10, y], fill=0, width=2)
+
+
+def draw_weather(draw, weather_data):
+    """Draw weather forecast in top part of right panel (400,0)-(800,240)."""
+    qx, qy, qw = 400, 0, 400
+    weather_h = 240
+
+    # Current weather at top
+    current = weather_data.current
+    temp_text = f"{int(current.temperature)}°"
+    desc_text = current.description.title()
+
+    bbox = draw.textbbox((0, 0), temp_text, font=FONT_WEATHER_TEMP)
+    tw = bbox[2] - bbox[0]
+    draw.text((qx + (qw - tw) // 2, qy + 15), temp_text, font=FONT_WEATHER_TEMP, fill=0)
+
+    bbox = draw.textbbox((0, 0), desc_text, font=FONT_WEATHER_DAY)
+    tw = bbox[2] - bbox[0]
+    draw.text((qx + (qw - tw) // 2, qy + 50), desc_text, font=FONT_WEATHER_DAY, fill=0)
+
+    # Current weather icon
+    draw_weather_icon(draw, current.icon, qx + qw // 2, qy + 90)
+
+    # 5-day forecast bars
+    forecast = weather_data.forecast[:5]
+    if not forecast:
+        return
+
+    bar_y = qy + 120
+    bar_h = weather_h - bar_y - 40
+    bar_spacing = 8
+    bar_w = (qw - (len(forecast) + 1) * bar_spacing) // len(forecast)
+
+    # Get temp range for scaling
+    all_temps = []
+    for day in forecast:
+        all_temps.extend([day.temp_min, day.temp_max])
+    temp_min = min(all_temps)
+    temp_max = max(all_temps)
+    temp_range = temp_max - temp_min if temp_max > temp_min else 10
+
+    for i, day in enumerate(forecast):
+        x = qx + bar_spacing + i * (bar_w + bar_spacing)
+
+        # Calculate bar heights
+        max_h = int((day.temp_max - temp_min) / temp_range * bar_h)
+        min_h = int((day.temp_min - temp_min) / temp_range * bar_h)
+
+        # Draw bar (min to max range)
+        bar_top = bar_y + bar_h - max_h
+        bar_bot = bar_y + bar_h - min_h
+        draw.rectangle([x, bar_top, x + bar_w, bar_bot], fill=0)
+
+        # Weather icon above bar
+        icon_x = x + bar_w // 2
+        icon_y = bar_top - 20
+        draw_weather_icon(draw, day.icon, icon_x, icon_y)
+
+        # Day label below
+        day_name = datetime.strptime(day.date, "%Y-%m-%d").strftime("%a")
+        bbox = draw.textbbox((0, 0), day_name, font=FONT_WEATHER_DAY)
+        tw = bbox[2] - bbox[0]
+        draw.text((x + (bar_w - tw) // 2, bar_y + bar_h + 5), day_name, font=FONT_WEATHER_DAY, fill=0)
+
+
 def draw_quote(draw, quote_text, quote_author):
-    """Draw quote in the right panel (400,0)-(800,480)."""
-    qx, qy, qw, qh = 400, 0, 400, 480
-    padding = 40
+    """Draw quote in bottom part of right panel (400,240)-(800,480)."""
+    qx, qy, qw, qh = 400, 240, 400, 240
+    padding = 30
 
     # Opening quote mark (large decorative)
-    draw.text((qx + padding - 10, qy + 60), "“", font=FONT_QUOTE_TEXT, fill=0)
+    draw.text((qx + padding - 8, qy + 20), "“", font=FONT_QUOTE_TEXT, fill=0)
 
     # Wrap and draw quote text
     wrapped = wrap_text(quote_text, FONT_QUOTE_TEXT, qw - 2 * padding, draw)
-    y = qy + 120
+    y = qy + 60
     for line in wrapped:
         bbox = draw.textbbox((0, 0), line, font=FONT_QUOTE_TEXT)
         tw = bbox[2] - bbox[0]
         x = qx + (qw - tw) // 2
         draw.text((x, y), line, font=FONT_QUOTE_TEXT, fill=0)
-        y += 45
+        y += 40
 
     # Closing quote mark
     bbox = draw.textbbox((0, 0), "”", font=FONT_QUOTE_TEXT)
     qm_w = bbox[2] - bbox[0]
-    draw.text((qx + qw - padding - qm_w + 10, y - 20), "”", font=FONT_QUOTE_TEXT, fill=0)
+    draw.text((qx + qw - padding - qm_w + 8, y - 20), "”", font=FONT_QUOTE_TEXT, fill=0)
 
     # Author name (centered at bottom)
     author_text = f"— {quote_author}"
     bbox = draw.textbbox((0, 0), author_text, font=FONT_QUOTE_AUTHOR)
     tw = bbox[2] - bbox[0]
-    draw.text((qx + (qw - tw) // 2, qy + qh - 90), author_text, font=FONT_QUOTE_AUTHOR, fill=0)
+    draw.text((qx + (qw - tw) // 2, qy + qh - 50), author_text, font=FONT_QUOTE_AUTHOR, fill=0)
 
+def draw_weather_decorations(draw):
+    """Black decorations for weather panel (top of right side)."""
+    qx, qy, qw = 400, 0, 400
 
-def draw_quote_decorations(draw):
-    """Black decorations for the quote panel."""
-    qx, qy, qw, qh = 400, 0, 400, 480
+    # Horizontal separator line
+    draw.line([qx + 20, 240, qx + qw - 20, 240], fill=0, width=2)
 
-    # Corner L-brackets
+    # Corner brackets for weather section
     for cx, cy, sx, sy in [
         (qx + 15, qy + 15, 1, 1),
         (qx + qw - 15, qy + 15, -1, 1),
+    ]:
+        draw.line([cx, cy, cx + sx * 20, cy], fill=0, width=2)
+        draw.line([cx, cy, cx, cy + sy * 20], fill=0, width=2)
+
+
+def draw_quote_decorations(draw):
+    """Black decorations for quote panel (bottom of right side)."""
+    qx, qy, qw, qh = 400, 240, 400, 240
+
+    # Corner brackets for quote section
+    for cx, cy, sx, sy in [
         (qx + 15, qy + qh - 15, 1, -1),
         (qx + qw - 15, qy + qh - 15, -1, -1),
     ]:
-        draw.line([cx, cy, cx + sx * 25, cy], fill=0, width=2)
-        draw.line([cx, cy, cx, cy + sy * 25], fill=0, width=2)
+        draw.line([cx, cy, cx + sx * 20, cy], fill=0, width=2)
+        draw.line([cx, cy, cx, cy + sy * 20], fill=0, width=2)
 
-    # Decorative dots along top and bottom
-    for y in [qy + 40, qy + qh - 40]:
-        for x in range(qx + 50, qx + qw - 50, 15):
-            draw.ellipse([x, y, x + 2, y + 2], fill=0)
+
+def draw_weather_red_decorations(draw):
+    """Red decorations for weather panel."""
+    qx, qy, qw = 400, 0, 400
+
+    # Small red dots at corners
+    for cx, cy in [(qx + 35, qy + 35), (qx + qw - 35, qy + 35)]:
+        draw.ellipse([cx - 3, cy - 3, cx + 3, cy + 3], fill=0)
 
 
 def draw_quote_red_decorations(draw):
-    """Red decorations for the quote panel."""
-    qx, qy, qw = 400, 0, 400
+    """Red decorations for quote panel."""
+    qx, qy = 400, 240
 
-    # Small red hearts at top corners
-    for hx in [qx + 35, qx + qw - 35]:
-        hy = 35
-        draw.ellipse([hx - 4, hy - 4, hx, hy], fill=0)
-        draw.ellipse([hx, hy - 4, hx + 4, hy], fill=0)
-        draw.polygon([hx - 4, hy - 1, hx, hy + 5, hx + 4, hy - 1], fill=0)
-
-    # Red accent diamonds
-    for dx, dy in [(qx + 50, 240), (qx + qw - 50, 240)]:
-        draw.polygon([dx, dy - 5, dx + 5, dy, dx, dy + 5, dx - 5, dy], fill=0)
+    # Small red hearts flanking quote
+    for hx in [qx + 25, qx + 400 - 25]:
+        hy = qy + 30
+        draw.ellipse([hx - 3, hy - 3, hx, hy], fill=0)
+        draw.ellipse([hx, hy - 3, hx + 3, hy], fill=0)
+        draw.polygon([hx - 3, hy - 1, hx, hy + 4, hx + 3, hy - 1], fill=0)
 
 
-def full_refresh(epd, now, quote_service):
-    """Full refresh: analog + digital clock in upper-left, dividers, RED hour hand, quote."""
+def full_refresh(epd, now, quote_service, weather_service):
+    """Full refresh: clock, date, weather, quote with decorations."""
     logger.info("Full refresh")
     epd.init()
 
-    # Fetch quote (service handles caching)
+    # Fetch data (services handle caching)
     quote = quote_service.get_quote_of_the_day()
+    weather = weather_service.get_weather(
+        lat=float(os.getenv("LATITUDE", "0")),
+        lon=float(os.getenv("LONGITUDE", "0"))
+    )
 
     black = Image.new("1", (epd.width, epd.height), 255)
     db = ImageDraw.Draw(black)
@@ -405,6 +544,9 @@ def full_refresh(epd, now, quote_service):
     draw_date(db, now)
     draw_date_decorations(db)
 
+    draw_weather(db, weather)
+    draw_weather_decorations(db)
+
     draw_quote(db, quote.text, quote.author)
     draw_quote_decorations(db)
 
@@ -415,6 +557,7 @@ def full_refresh(epd, now, quote_service):
     draw_red_decorations(dr)
     draw_date(db, now, red_draw=dr)
     draw_date_red_decorations(dr)
+    draw_weather_red_decorations(dr)
     draw_quote_red_decorations(dr)
 
     epd.display(epd.getbuffer(black), epd.getbuffer(red))
@@ -479,7 +622,13 @@ def partial_refresh_with_old(
 def clock():
     try:
         epd = epd7in5b_V2.EPD()
-        quote_service: QuoteService = ZenQuotesService()
+        quote_service = ZenQuotesService()
+
+        # Initialize weather service
+        api_key = os.getenv("OPENWEATHER_API_KEY")
+        if not api_key:
+            logger.warning("OPENWEATHER_API_KEY not set, weather will show fallback data")
+        weather_service = OpenWeatherMapService(api_key or "dummy")
 
         logger.info("init and Clear")
         epd.init()
@@ -505,7 +654,7 @@ def clock():
             )
 
             if do_full:
-                full_refresh(epd, now, quote_service)
+                full_refresh(epd, now, quote_service, weather_service)
                 prev_buf = to_buffer(
                     render_region(now, region_x, region_y, region_w, region_h)
                 )
