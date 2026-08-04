@@ -7,10 +7,14 @@ from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
 
 from lib.waveshare_epd import epd7in5b_V2
+from services.quote_service import QuoteService
+from services.zenquotes_service import ZenQuotesService
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 logging.basicConfig(level=logging.DEBUG)
+
+logger = logging.getLogger(__name__)
 
 # --- Layout: 800x480 split into regions ---
 # Left half (400x480) split into upper (400x240) and lower (400x240).
@@ -49,6 +53,14 @@ FONT_DIGI = ImageFont.truetype(
 
 FONT_DIGI_SM = ImageFont.truetype(
     os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 36
+)
+
+FONT_QUOTE_TEXT = ImageFont.truetype(
+    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 32
+)
+
+FONT_QUOTE_AUTHOR = ImageFont.truetype(
+    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 24
 )
 
 
@@ -188,6 +200,17 @@ def draw_decorations(draw, ox=0, oy=0):
         draw.ellipse([icon_x - 3, icon_y - 8, icon_x + 11, icon_y + 8], fill=255)
 
 
+def _draw_star(draw, cx, cy, outer_r, inner_r, points=5):
+    """Draw a small filled star."""
+    coords = []
+    for i in range(points * 2):
+        r = outer_r if i % 2 == 0 else inner_r
+        angle = math.pi * i / points - math.pi / 2
+        coords.append(cx + r * math.cos(angle))
+        coords.append(cy + r * math.sin(angle))
+    draw.polygon(coords, fill=0)
+
+
 def draw_red_decorations(draw, ox=0, oy=0):
     """Red accent elements for the upper-left quadrant."""
     # Small red diamond below the analog clock
@@ -209,17 +232,6 @@ def draw_red_decorations(draw, ox=0, oy=0):
     # Small red stars at top corners of upper-left quadrant
     for sx, sy in [(25 - ox, 22 - oy), (375 - ox, 22 - oy)]:
         _draw_star(draw, sx, sy, 6, 3)
-
-
-def _draw_star(draw, cx, cy, outer_r, inner_r, points=5):
-    """Draw a small filled star."""
-    coords = []
-    for i in range(points * 2):
-        r = outer_r if i % 2 == 0 else inner_r
-        angle = math.pi * i / points - math.pi / 2
-        coords.append(cx + r * math.cos(angle))
-        coords.append(cy + r * math.sin(angle))
-    draw.polygon(coords, fill=0)
 
 
 def draw_date_decorations(draw):
@@ -287,10 +299,103 @@ def draw_dividers(draw):
     draw.line([0, 240, 400, 240], fill=0, width=2)
 
 
-def full_refresh(epd, now):
-    """Full refresh: analog + digital clock in upper-left, dividers, RED hour hand."""
-    logging.info("Full refresh")
+def wrap_text(text, font, max_width, draw):
+    """Wrap text to fit within max_width."""
+    words = text.split()
+    lines = []
+    current_line = []
+
+    for word in words:
+        test_line = " ".join(current_line + [word])
+        bbox = draw.textbbox((0, 0), test_line, font=font)
+        width = bbox[2] - bbox[0]
+
+        if width <= max_width:
+            current_line.append(word)
+        else:
+            if current_line:
+                lines.append(" ".join(current_line))
+            current_line = [word]
+
+    if current_line:
+        lines.append(" ".join(current_line))
+
+    return lines
+
+
+def draw_quote(draw, quote_text, quote_author):
+    """Draw quote in the right panel (400,0)-(800,480)."""
+    qx, qy, qw, qh = 400, 0, 400, 480
+    padding = 40
+
+    # Opening quote mark (large decorative)
+    draw.text((qx + padding - 10, qy + 60), "“", font=FONT_QUOTE_TEXT, fill=0)
+
+    # Wrap and draw quote text
+    wrapped = wrap_text(quote_text, FONT_QUOTE_TEXT, qw - 2 * padding, draw)
+    y = qy + 120
+    for line in wrapped:
+        bbox = draw.textbbox((0, 0), line, font=FONT_QUOTE_TEXT)
+        tw = bbox[2] - bbox[0]
+        x = qx + (qw - tw) // 2
+        draw.text((x, y), line, font=FONT_QUOTE_TEXT, fill=0)
+        y += 45
+
+    # Closing quote mark
+    bbox = draw.textbbox((0, 0), "”", font=FONT_QUOTE_TEXT)
+    qm_w = bbox[2] - bbox[0]
+    draw.text((qx + qw - padding - qm_w + 10, y - 20), "”", font=FONT_QUOTE_TEXT, fill=0)
+
+    # Author name (centered at bottom)
+    author_text = f"— {quote_author}"
+    bbox = draw.textbbox((0, 0), author_text, font=FONT_QUOTE_AUTHOR)
+    tw = bbox[2] - bbox[0]
+    draw.text((qx + (qw - tw) // 2, qy + qh - 90), author_text, font=FONT_QUOTE_AUTHOR, fill=0)
+
+
+def draw_quote_decorations(draw):
+    """Black decorations for the quote panel."""
+    qx, qy, qw, qh = 400, 0, 400, 480
+
+    # Corner L-brackets
+    for cx, cy, sx, sy in [
+        (qx + 15, qy + 15, 1, 1),
+        (qx + qw - 15, qy + 15, -1, 1),
+        (qx + 15, qy + qh - 15, 1, -1),
+        (qx + qw - 15, qy + qh - 15, -1, -1),
+    ]:
+        draw.line([cx, cy, cx + sx * 25, cy], fill=0, width=2)
+        draw.line([cx, cy, cx, cy + sy * 25], fill=0, width=2)
+
+    # Decorative dots along top and bottom
+    for y in [qy + 40, qy + qh - 40]:
+        for x in range(qx + 50, qx + qw - 50, 15):
+            draw.ellipse([x, y, x + 2, y + 2], fill=0)
+
+
+def draw_quote_red_decorations(draw):
+    """Red decorations for the quote panel."""
+    qx, qy, qw = 400, 0, 400
+
+    # Small red hearts at top corners
+    for hx in [qx + 35, qx + qw - 35]:
+        hy = 35
+        draw.ellipse([hx - 4, hy - 4, hx, hy], fill=0)
+        draw.ellipse([hx, hy - 4, hx + 4, hy], fill=0)
+        draw.polygon([hx - 4, hy - 1, hx, hy + 5, hx + 4, hy - 1], fill=0)
+
+    # Red accent diamonds
+    for dx, dy in [(qx + 50, 240), (qx + qw - 50, 240)]:
+        draw.polygon([dx, dy - 5, dx + 5, dy, dx, dy + 5, dx - 5, dy], fill=0)
+
+
+def full_refresh(epd, now, quote_service):
+    """Full refresh: analog + digital clock in upper-left, dividers, RED hour hand, quote."""
+    logger.info("Full refresh")
     epd.init()
+
+    # Fetch quote (service handles caching)
+    quote = quote_service.get_quote_of_the_day()
 
     black = Image.new("1", (epd.width, epd.height), 255)
     db = ImageDraw.Draw(black)
@@ -302,6 +407,9 @@ def full_refresh(epd, now):
     draw_date(db, now)
     draw_date_decorations(db)
 
+    draw_quote(db, quote.text, quote.author)
+    draw_quote_decorations(db)
+
     red = Image.new("1", (epd.width, epd.height), 255)
     dr = ImageDraw.Draw(red)
     draw_hour_hand(dr, now.hour, now.minute, fill=0)
@@ -309,6 +417,7 @@ def full_refresh(epd, now):
     draw_red_decorations(dr)
     draw_date(db, now, red_draw=dr)
     draw_date_red_decorations(dr)
+    draw_quote_red_decorations(dr)
 
     epd.display(epd.getbuffer(black), epd.getbuffer(red))
 
@@ -372,7 +481,9 @@ def partial_refresh_with_old(
 def clock():
     try:
         epd = epd7in5b_V2.EPD()
-        logging.info("init and Clear")
+        quote_service: QuoteService = ZenQuotesService()
+
+        logger.info("init and Clear")
         epd.init()
         epd.Clear()
 
@@ -396,7 +507,7 @@ def clock():
             )
 
             if do_full:
-                full_refresh(epd, now)
+                full_refresh(epd, now, quote_service)
                 prev_buf = to_buffer(
                     render_region(now, region_x, region_y, region_w, region_h)
                 )
@@ -419,10 +530,10 @@ def clock():
             time.sleep(seconds_left)
 
     except IOError as e:
-        logging.info(e)
+        logger.info(e)
 
     except KeyboardInterrupt:
-        logging.info("ctrl + c:")
+        logger.info("ctrl + c:")
         epd7in5b_V2.epdconfig.module_exit(cleanup=True)
 
 
