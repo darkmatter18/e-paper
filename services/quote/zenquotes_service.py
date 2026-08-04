@@ -1,7 +1,7 @@
 import logging
 from datetime import date
 
-from services.quote_service import Quote, QuoteService
+from services.quote.quote_service import Quote, QuoteService
 from utils.http_client import HttpClient
 
 logger = logging.getLogger(__name__)

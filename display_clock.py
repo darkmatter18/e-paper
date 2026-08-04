@@ -7,14 +7,12 @@ from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
 
 from lib.waveshare_epd import epd7in5b_V2
-from services.quote_service import QuoteService
-from services.zenquotes_service import ZenQuotesService
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+from services.quote import QuoteService, ZenQuotesService
 
 logging.basicConfig(level=logging.DEBUG)
-
 logger = logging.getLogger(__name__)
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # --- Layout: 800x480 split into regions ---
 # Left half (400x480) split into upper (400x240) and lower (400x240).
