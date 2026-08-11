@@ -81,6 +81,32 @@ FONT_WEATHER_SMALL = ImageFont.truetype(
     os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 14
 )
 
+FONT_WEATHER_ICON = ImageFont.truetype(
+    os.path.join(BASE_DIR, "fonts", "weathericons-regular-webfont.ttf"), 24
+)
+
+# OpenWeatherMap icon code to Weather Icons font character mapping
+WEATHER_ICON_MAP = {
+    "01d": "",  # day-sunny
+    "01n": "",  # night-clear
+    "02d": "",  # day-cloudy
+    "02n": "",  # night-alt-cloudy
+    "03d": "",  # cloud
+    "03n": "",  # cloud
+    "04d": "",  # cloudy
+    "04n": "",  # cloudy
+    "09d": "",  # showers
+    "09n": "",  # showers
+    "10d": "",  # day-rain
+    "10n": "",  # night-alt-rain
+    "11d": "",  # day-thunderstorm
+    "11n": "",  # night-alt-thunderstorm
+    "13d": "",  # day-snow
+    "13n": "",  # night-alt-snow
+    "50d": "",  # day-fog
+    "50n": "",  # night-fog
+}
+
 
 def hand_endpoint(length, value, total):
     """Point at the tip of a hand. 12 o'clock is up, sweeping clockwise."""
@@ -342,46 +368,17 @@ def wrap_text(text, font, max_width, draw):
 
 
 def draw_weather_icon(draw, icon_code, cx, cy):
-    """Draw simplified weather icon based on OpenWeatherMap icon code."""
-    # Icon codes: 01d/01n=clear, 02d/02n=few clouds, 03d/03n=clouds,
-    #             04d/04n=broken clouds, 09d/09n=rain, 10d/10n=rain,
-    #             11d/11n=thunderstorm, 13d/13n=snow, 50d/50n=mist
+    """Draw weather icon using Weather Icons font."""
+    # Get the icon character from mapping, fallback to cloud if not found
+    icon_char = WEATHER_ICON_MAP.get(icon_code, "")
 
-    icon_base = icon_code[:2] if len(icon_code) >= 2 else "01"
+    # Center the icon
+    bbox = draw.textbbox((0, 0), icon_char, font=FONT_WEATHER_ICON)
+    icon_w = bbox[2] - bbox[0]
+    icon_h = bbox[3] - bbox[1]
 
-    if icon_base == "01":  # Clear sky - sun
-        draw.ellipse([cx - 8, cy - 8, cx + 8, cy + 8], outline=0, width=2)
-        for i in range(8):
-            angle = 2 * math.pi * i / 8
-            x1 = cx + 12 * math.cos(angle)
-            y1 = cy + 12 * math.sin(angle)
-            x2 = cx + 16 * math.cos(angle)
-            y2 = cy + 16 * math.sin(angle)
-            draw.line([x1, y1, x2, y2], fill=0, width=2)
-    elif icon_base in ["02", "03", "04"]:  # Clouds
-        draw.ellipse([cx - 12, cy - 6, cx - 2, cy + 4], fill=0)
-        draw.ellipse([cx - 6, cy - 8, cx + 6, cy + 2], fill=0)
-        draw.ellipse([cx + 2, cy - 6, cx + 12, cy + 4], fill=0)
-    elif icon_base in ["09", "10"]:  # Rain
-        draw.ellipse([cx - 10, cy - 8, cx + 10, cy], fill=0)
-        for i in range(3):
-            x = cx - 6 + i * 6
-            draw.line([x, cy + 2, x, cy + 10], fill=0, width=2)
-    elif icon_base == "11":  # Thunderstorm
-        draw.ellipse([cx - 10, cy - 8, cx + 10, cy], fill=0)
-        draw.polygon([cx, cy + 2, cx - 6, cy + 8, cx - 2, cy + 8,
-                     cx - 4, cy + 12, cx + 4, cy + 4, cx, cy + 4], fill=0)
-    elif icon_base == "13":  # Snow
-        for i in range(6):
-            angle = math.pi * i / 3
-            x1 = cx + 10 * math.cos(angle)
-            y1 = cy + 10 * math.sin(angle)
-            draw.line([cx, cy, x1, y1], fill=0, width=2)
-        draw.ellipse([cx - 3, cy - 3, cx + 3, cy + 3], fill=0)
-    else:  # Mist/fog
-        for i in range(3):
-            y = cy - 6 + i * 6
-            draw.line([cx - 10, y, cx + 10, y], fill=0, width=2)
+    # Draw icon centered at (cx, cy)
+    draw.text((cx - icon_w // 2, cy - icon_h // 2), icon_char, font=FONT_WEATHER_ICON, fill=0)
 
 
 def draw_weather(draw, weather_data):
