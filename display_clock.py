@@ -66,19 +66,19 @@ FONT_QUOTE_AUTHOR = ImageFont.truetype(
 )
 
 FONT_WEATHER_TEMP = ImageFont.truetype(
-    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 28
+    os.path.join(BASE_DIR, "fonts", "Righteous-Regular.ttf"), 28
 )
 
 FONT_WEATHER_DAY = ImageFont.truetype(
-    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 18
+    os.path.join(BASE_DIR, "fonts", "Righteous-Regular.ttf"), 18
 )
 
 FONT_WEATHER_LABEL = ImageFont.truetype(
-    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 22
+    os.path.join(BASE_DIR, "fonts", "Righteous-Regular.ttf"), 22
 )
 
 FONT_WEATHER_SMALL = ImageFont.truetype(
-    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 14
+    os.path.join(BASE_DIR, "fonts", "Righteous-Regular.ttf"), 14
 )
 
 FONT_WEATHER_ICON = ImageFont.truetype(
