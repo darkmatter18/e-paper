@@ -411,7 +411,7 @@ def draw_weather(draw, weather_data):
         return
 
     bar_y = qy + 115
-    bar_h = 55  # Shorter bars to make room for labels
+    bar_h = 45  # Bar area height
     bar_spacing = 5
     bar_w = (qw - (len(forecast) + 1) * bar_spacing) // len(forecast)
 
@@ -436,37 +436,41 @@ def draw_weather(draw, weather_data):
         bar_bot = bar_y + bar_h - min_h
         draw.rectangle([x, bar_top, x + bar_w, bar_bot], outline=0, width=2)
 
+        # Weather icon above bar
+        icon_y = bar_top - 35
+        draw_weather_icon(draw, day.icon, center_x, icon_y)
+
         # Max temp label above bar
         max_temp = f"{int(day.temp_max)}°"
         bbox = draw.textbbox((0, 0), max_temp, font=FONT_WEATHER_SMALL)
         tw = bbox[2] - bbox[0]
         draw.text((center_x - tw // 2, bar_top - 16), max_temp, font=FONT_WEATHER_SMALL, fill=0)
 
-        # Min temp label inside/below bar
+        # Min temp label - fixed position below bar area to avoid overlap
         min_temp = f"{int(day.temp_min)}°"
         bbox = draw.textbbox((0, 0), min_temp, font=FONT_WEATHER_SMALL)
         tw = bbox[2] - bbox[0]
-        draw.text((center_x - tw // 2, bar_bot - 2), min_temp, font=FONT_WEATHER_SMALL, fill=0)
+        min_y = bar_y + bar_h + 2  # Fixed position below bar area
+        draw.text((center_x - tw // 2, min_y), min_temp, font=FONT_WEATHER_SMALL, fill=0)
 
-        # Weather icon above bar
-        icon_y = bar_top - 35
-        draw_weather_icon(draw, day.icon, center_x, icon_y)
-
-        # Rain probability if > 0
+        # Rain probability if > 0 - positioned below min temp
         if day.rain_probability > 0:
             rain_text = f"{day.rain_probability}%"
             bbox = draw.textbbox((0, 0), rain_text, font=FONT_WEATHER_SMALL)
             tw = bbox[2] - bbox[0]
-            draw.text((center_x - tw // 2, bar_y + bar_h + 2), rain_text, font=FONT_WEATHER_SMALL, fill=0)
-            # Small droplet icon
-            drop_y = bar_y + bar_h + 18
-            draw.ellipse([center_x - 3, drop_y, center_x + 3, drop_y + 6], fill=0)
+            rain_y = min_y + 16  # Below min temp
+            draw.text((center_x - tw // 2, rain_y), rain_text, font=FONT_WEATHER_SMALL, fill=0)
+            # Small droplet icon next to percentage
+            drop_x = center_x + tw // 2 + 3
+            drop_y = rain_y + 2
+            draw.ellipse([drop_x, drop_y, drop_x + 4, drop_y + 6], fill=0)
 
         # Day label at bottom
         day_name = datetime.strptime(day.date, "%Y-%m-%d").strftime("%a")
         bbox = draw.textbbox((0, 0), day_name, font=FONT_WEATHER_DAY)
         tw = bbox[2] - bbox[0]
-        label_y = bar_y + bar_h + 22 if day.rain_probability > 0 else bar_y + bar_h + 2
+        # Position depends on whether rain is shown
+        label_y = min_y + 32 if day.rain_probability > 0 else min_y + 16
         draw.text((center_x - tw // 2, label_y), day_name, font=FONT_WEATHER_DAY, fill=0)
 
 
