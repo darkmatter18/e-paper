@@ -261,10 +261,6 @@ def draw_red_decorations(draw, ox=0, oy=0):
     dx, dy = CX - ox, CY + RADIUS + 14 - oy
     draw.polygon([dx, dy - 5, dx + 5, dy, dx, dy + 5, dx - 5, dy], fill=0)
 
-    # Red accent line flanking the digital area
-    lx = DIGI_X - 12 - ox
-    draw.line([lx, 50 - oy, lx, 190 - oy], fill=0, width=2)
-
     # Red dots at the quarter-hour positions on the outer ring
     for i in [0, 15, 30, 45]:
         angle = 2 * math.pi * (i / 60)
