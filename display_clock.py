@@ -278,13 +278,13 @@ def draw_date_decorations(draw):
     """Black decorations for the bottom-left date quadrant."""
     qx, qy, qw = 0, 240, 400
 
-    # Scalloped top border
-    for i in range(0, qw, 30):
-        draw.arc([qx + i + 2, qy + 8, qx + i + 28, qy + 28], 0, 180, fill=0, width=2)
+    # Scalloped top border (start from 10 to avoid edge overflow)
+    for i in range(10, qw - 20, 30):
+        draw.arc([qx + i, qy + 8, qx + i + 26, qy + 28], 0, 180, fill=0, width=2)
 
-    # Scalloped bottom border
-    for i in range(0, qw, 30):
-        draw.arc([qx + i + 2, 480 - 28, qx + i + 28, 480 - 8], 180, 360, fill=0, width=2)
+    # Scalloped bottom border (start from 10 to avoid edge overflow)
+    for i in range(10, qw - 20, 30):
+        draw.arc([qx + i, 480 - 28, qx + i + 26, 480 - 8], 180, 360, fill=0, width=2)
 
     # Small diamond separators flanking the date text
     for dx in [60, 340]:
