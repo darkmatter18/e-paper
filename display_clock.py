@@ -395,27 +395,33 @@ def draw_weather(draw, weather_data):
     # Layout elements horizontally
     y_line = qy + 25
 
-    # Temperature (start from left)
+    # All text aligned to same baseline
+    # Temperature (start from left) - larger font
     temp_text = f"{int(current.temperature)}°"
     temp_x = qx + 30
-    draw.text((temp_x, y_line - 10), temp_text, font=FONT_WEATHER_TEMP, fill=0)
+    temp_bbox = draw.textbbox((0, 0), temp_text, font=FONT_WEATHER_TEMP)
+    temp_h = temp_bbox[3] - temp_bbox[1]
+    draw.text((temp_x, y_line - temp_h + 4), temp_text, font=FONT_WEATHER_TEMP, fill=0)
+    temp_w = temp_bbox[2] - temp_bbox[0]
 
-    # Description
+    # Description - aligned to same baseline
     desc_text = current.description.title()
     bbox = draw.textbbox((0, 0), desc_text, font=FONT_WEATHER_DAY)
-    desc_x = temp_x + 55
-    draw.text((desc_x, y_line - 6), desc_text, font=FONT_WEATHER_DAY, fill=0)
+    desc_h = bbox[3] - bbox[1]
+    desc_x = temp_x + temp_w + 10
+    draw.text((desc_x, y_line - desc_h + 4), desc_text, font=FONT_WEATHER_DAY, fill=0)
     desc_w = bbox[2] - bbox[0]
 
-    # Rain probability if > 0
+    # Rain probability if > 0 - aligned to same baseline
     rain_x = desc_x + desc_w + 15
     if current.rain_probability > 0:
         rain_text = f"{current.rain_probability}%"
-        draw.text((rain_x, y_line - 6), rain_text, font=FONT_WEATHER_DAY, fill=0)
-        # Droplet icon
-        bbox = draw.textbbox((0, 0), rain_text, font=FONT_WEATHER_DAY)
-        drop_x = rain_x + (bbox[2] - bbox[0]) + 4
-        drop_y = y_line - 4
+        rain_bbox = draw.textbbox((0, 0), rain_text, font=FONT_WEATHER_DAY)
+        rain_h = rain_bbox[3] - rain_bbox[1]
+        draw.text((rain_x, y_line - rain_h + 4), rain_text, font=FONT_WEATHER_DAY, fill=0)
+        # Droplet icon aligned
+        drop_x = rain_x + (rain_bbox[2] - rain_bbox[0]) + 4
+        drop_y = y_line - rain_h + 6
         draw.ellipse([drop_x, drop_y, drop_x + 5, drop_y + 8], fill=0)
         # Weather icon on the right after rain
         icon_x = drop_x + 15
@@ -423,8 +429,8 @@ def draw_weather(draw, weather_data):
         # Weather icon right after description if no rain
         icon_x = rain_x
 
-    # Draw icon aligned with text (adjusted y position)
-    icon_y = y_line + 4  # Align with text baseline
+    # Draw icon aligned with text baseline
+    icon_y = y_line - 4  # Align with text baseline
     draw_weather_icon(draw, current.icon, icon_x, icon_y)
 
     # Separator line
