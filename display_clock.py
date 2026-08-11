@@ -432,11 +432,17 @@ def draw_weather(draw, weather_data):
         return
 
     bar_y = qy + 95  # Start lower since current weather is more compact
-    bar_h = 50  # Bar area height
-    bar_w = 20  # Fixed narrow width for elegant look
-    total_width = len(forecast) * bar_w + (len(forecast) - 1) * 15  # bars + spacing
-    start_x = qx + (qw - total_width) // 2  # Center the bars
-    bar_spacing = 15  # More space between bars
+    bar_h = 55  # Bar area height
+    bar_w = 24  # Narrow but not too thin
+
+    # Distribute evenly across the full width with margins
+    margin = 30  # Left/right margins
+    available_width = qw - 2 * margin
+    total_bar_width = len(forecast) * bar_w
+    total_gap_width = available_width - total_bar_width
+    bar_spacing = total_gap_width // (len(forecast) + 1)  # Even spacing
+
+    start_x = qx + margin + bar_spacing  # Start with margin + first gap
 
     # Get temp range for scaling
     all_temps = []
