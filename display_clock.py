@@ -58,11 +58,11 @@ FONT_DIGI_SM = ImageFont.truetype(
 )
 
 FONT_QUOTE_TEXT = ImageFont.truetype(
-    os.path.join(BASE_DIR, "fonts", "PlayfairDisplay-Regular.ttf"), 32
+    os.path.join(BASE_DIR, "fonts", "PlayfairDisplay-VariableFont_wght.ttf"), 32
 )
 
 FONT_QUOTE_AUTHOR = ImageFont.truetype(
-    os.path.join(BASE_DIR, "fonts", "PlayfairDisplay-Italic.ttf"), 24
+    os.path.join(BASE_DIR, "fonts", "PlayfairDisplay-Italic-VariableFont_wght.ttf"), 24
 )
 
 FONT_WEATHER_TEMP = ImageFont.truetype(
