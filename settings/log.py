@@ -24,11 +24,11 @@ DEFAULT_LOGGING = {
             "level": "DEBUG" if DEBUG else "INFO",
         },
         # # Remove all pymongo.* loggers
-        # "pymongo": {
-        #     "handlers": ["console"],
-        #     "level": "ERROR",
-        #     "propagate": False,
-        # },
+        "httpcore": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
         # "fastapi": {
         #     "handlers": ["console"],
         #     "level": "DEBUG" if DEBUG else "INFO",
