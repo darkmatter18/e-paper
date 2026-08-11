@@ -422,8 +422,8 @@ def draw_weather(draw, weather_data):
         drop_y = y_line - 4
         draw.ellipse([drop_x, drop_y, drop_x + 5, drop_y + 8], fill=0)
 
-    # Separator line (moved down to avoid overlap with forecast icons)
-    sep_y = qy + 75
+    # Separator line
+    sep_y = qy + 55
     draw.line([qx + 20, sep_y, qx + qw - 20, sep_y], fill=0, width=1)
 
     # 5-day forecast bars
