@@ -381,7 +381,7 @@ def draw_weather_icon(draw, icon_code, cx, cy):
     draw.text((cx - icon_w // 2, cy - icon_h // 2), icon_char, font=FONT_WEATHER_ICON, fill=0)
 
 
-def draw_weather(draw, weather_data):
+def draw_weather(draw, weather_data, red_draw=None):
     """Draw weather forecast in top part of right panel (400,0)-(800,240)."""
     qx, qy, qw = 400, 0, 400
     weather_h = 240
@@ -423,8 +423,9 @@ def draw_weather(draw, weather_data):
     # Center the entire block
     start_x = qx + (qw - total_w) // 2
 
-    # Draw temperature
-    draw.text((start_x, y_line - temp_h + 4), temp_text, font=FONT_WEATHER_TEMP, fill=0)
+    # Draw temperature (in RED if red_draw provided)
+    temp_target = red_draw if red_draw else draw
+    temp_target.text((start_x, y_line - temp_h + 4), temp_text, font=FONT_WEATHER_TEMP, fill=0)
 
     # Draw description
     desc_x = start_x + temp_w + spacing
@@ -493,11 +494,12 @@ def draw_weather(draw, weather_data):
         icon_y = bar_top - 35
         draw_weather_icon(draw, day.icon, center_x, icon_y)
 
-        # Max temp label above bar
+        # Max temp label above bar (in RED if red_draw provided)
         max_temp = f"{int(day.temp_max)}°"
         bbox = draw.textbbox((0, 0), max_temp, font=FONT_WEATHER_SMALL)
         tw = bbox[2] - bbox[0]
-        draw.text((center_x - tw // 2, bar_top - 16), max_temp, font=FONT_WEATHER_SMALL, fill=0)
+        max_target = red_draw if red_draw else draw
+        max_target.text((center_x - tw // 2, bar_top - 16), max_temp, font=FONT_WEATHER_SMALL, fill=0)
 
         # Min temp label - fixed position below bar area to avoid overlap
         min_temp = f"{int(day.temp_min)}°"
@@ -628,9 +630,6 @@ def full_refresh(epd, now, quote_service, weather_service):
     draw_date(db, now)
     draw_date_decorations(db)
 
-    draw_weather(db, weather)
-    draw_weather_decorations(db)
-
     draw_quote(db, quote.text, quote.author)
     draw_quote_decorations(db)
 
@@ -641,6 +640,10 @@ def full_refresh(epd, now, quote_service, weather_service):
     draw_red_decorations(dr)
     draw_date(db, now, red_draw=dr)
     draw_date_red_decorations(dr)
+
+    # Draw weather with red accents (current temp + max temps)
+    draw_weather(db, weather, red_draw=dr)
+    draw_weather_decorations(db)
     draw_weather_red_decorations(dr)
     draw_quote_red_decorations(dr)
 
