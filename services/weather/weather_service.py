@@ -11,6 +11,7 @@ class CurrentWeather:
     humidity: int
     description: str
     icon: str  # Weather icon code
+    rain_probability: int = 0  # Rain probability percentage (0-100)
 
 
 @dataclass

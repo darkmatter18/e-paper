@@ -49,6 +49,14 @@ class OpenWeatherMapService(WeatherService):
             current = self._fetch_current(lat, lon)
             forecast = self._fetch_forecast(lat, lon)
 
+            # Get today's rain probability from forecast
+            if forecast:
+                today = datetime.now().strftime("%Y-%m-%d")
+                for day in forecast:
+                    if day.date == today:
+                        current.rain_probability = day.rain_probability
+                        break
+
             return WeatherData(current=current, forecast=forecast)
 
         except Exception as e:

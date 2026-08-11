@@ -389,29 +389,50 @@ def draw_weather(draw, weather_data):
     qx, qy, qw = 400, 0, 400
     weather_h = 240
 
-    # Current weather at top
+    # Current weather in single line: Icon | Temp | Description | Rain%
     current = weather_data.current
+
+    # Layout elements horizontally
+    y_line = qy + 25
+
+    # Weather icon on left
+    icon_x = qx + 30
+    draw_weather_icon(draw, current.icon, icon_x, y_line)
+
+    # Temperature
     temp_text = f"{int(current.temperature)}°"
+    temp_x = icon_x + 35
+    draw.text((temp_x, y_line - 10), temp_text, font=FONT_WEATHER_TEMP, fill=0)
+
+    # Description
     desc_text = current.description.title()
-
-    bbox = draw.textbbox((0, 0), temp_text, font=FONT_WEATHER_TEMP)
-    tw = bbox[2] - bbox[0]
-    draw.text((qx + (qw - tw) // 2, qy + 15), temp_text, font=FONT_WEATHER_TEMP, fill=0)
-
     bbox = draw.textbbox((0, 0), desc_text, font=FONT_WEATHER_DAY)
-    tw = bbox[2] - bbox[0]
-    draw.text((qx + (qw - tw) // 2, qy + 50), desc_text, font=FONT_WEATHER_DAY, fill=0)
+    desc_x = temp_x + 55
+    draw.text((desc_x, y_line - 6), desc_text, font=FONT_WEATHER_DAY, fill=0)
+    desc_w = bbox[2] - bbox[0]
 
-    # Current weather icon
-    draw_weather_icon(draw, current.icon, qx + qw // 2, qy + 90)
+    # Rain probability if > 0
+    if current.rain_probability > 0:
+        rain_x = desc_x + desc_w + 15
+        rain_text = f"{current.rain_probability}%"
+        draw.text((rain_x, y_line - 6), rain_text, font=FONT_WEATHER_DAY, fill=0)
+        # Droplet icon
+        bbox = draw.textbbox((0, 0), rain_text, font=FONT_WEATHER_DAY)
+        drop_x = rain_x + (bbox[2] - bbox[0]) + 4
+        drop_y = y_line - 4
+        draw.ellipse([drop_x, drop_y, drop_x + 5, drop_y + 8], fill=0)
+
+    # Separator line
+    sep_y = qy + 55
+    draw.line([qx + 20, sep_y, qx + qw - 20, sep_y], fill=0, width=1)
 
     # 5-day forecast bars
     forecast = weather_data.forecast[:5]
     if not forecast:
         return
 
-    bar_y = qy + 115
-    bar_h = 45  # Bar area height
+    bar_y = qy + 95  # Start lower since current weather is more compact
+    bar_h = 50  # Bar area height
     bar_spacing = 5
     bar_w = (qw - (len(forecast) + 1) * bar_spacing) // len(forecast)
 
