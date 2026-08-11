@@ -58,11 +58,11 @@ FONT_DIGI_SM = ImageFont.truetype(
 )
 
 FONT_QUOTE_TEXT = ImageFont.truetype(
-    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 32
+    os.path.join(BASE_DIR, "fonts", "PlayfairDisplay-Regular.ttf"), 32
 )
 
 FONT_QUOTE_AUTHOR = ImageFont.truetype(
-    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 24
+    os.path.join(BASE_DIR, "fonts", "PlayfairDisplay-Italic.ttf"), 24
 )
 
 FONT_WEATHER_TEMP = ImageFont.truetype(
@@ -526,33 +526,61 @@ def draw_weather(draw, weather_data, red_draw=None):
 
 
 def draw_quote(draw, quote_text, quote_author):
-    """Draw quote in bottom part of right panel (400,240)-(800,480)."""
+    """Draw quote in bottom part of right panel (400,240)-(800,480) with dynamic font sizing."""
     qx, qy, qw, qh = 400, 240, 400, 240
     padding = 30
+    available_height = qh - 100  # Reserve space for decorations and author
+
+    # Determine optimal font size based on quote length and available space
+    font_sizes = [32, 28, 24, 20]  # Try these sizes in order
+    author_font_sizes = [24, 22, 20, 18]  # Corresponding author sizes
+
+    quote_font = None
+    author_font = None
+    wrapped = []
+    line_height = 40
+
+    for i, size in enumerate(font_sizes):
+        quote_font = ImageFont.truetype(
+            os.path.join(BASE_DIR, "fonts", "PlayfairDisplay-Regular.ttf"), size
+        )
+        author_font = ImageFont.truetype(
+            os.path.join(BASE_DIR, "fonts", "PlayfairDisplay-Italic.ttf"), author_font_sizes[i]
+        )
+
+        # Calculate line height based on font size
+        line_height = int(size * 1.3)
+
+        # Try wrapping with this font size
+        wrapped = wrap_text(quote_text, quote_font, qw - 2 * padding, draw)
+        total_height = len(wrapped) * line_height
+
+        # If it fits, use this size
+        if total_height <= available_height:
+            break
 
     # Opening quote mark (large decorative)
-    draw.text((qx + padding - 8, qy + 20), "“", font=FONT_QUOTE_TEXT, fill=0)
+    draw.text((qx + padding - 8, qy + 20), "“", font=quote_font, fill=0)
 
     # Wrap and draw quote text
-    wrapped = wrap_text(quote_text, FONT_QUOTE_TEXT, qw - 2 * padding, draw)
     y = qy + 60
     for line in wrapped:
-        bbox = draw.textbbox((0, 0), line, font=FONT_QUOTE_TEXT)
+        bbox = draw.textbbox((0, 0), line, font=quote_font)
         tw = bbox[2] - bbox[0]
         x = qx + (qw - tw) // 2
-        draw.text((x, y), line, font=FONT_QUOTE_TEXT, fill=0)
-        y += 40
+        draw.text((x, y), line, font=quote_font, fill=0)
+        y += line_height
 
     # Closing quote mark
-    bbox = draw.textbbox((0, 0), "”", font=FONT_QUOTE_TEXT)
+    bbox = draw.textbbox((0, 0), "”", font=quote_font)
     qm_w = bbox[2] - bbox[0]
-    draw.text((qx + qw - padding - qm_w + 8, y - 20), "”", font=FONT_QUOTE_TEXT, fill=0)
+    draw.text((qx + qw - padding - qm_w + 8, y - line_height // 2), "”", font=quote_font, fill=0)
 
     # Author name (centered at bottom)
     author_text = f"— {quote_author}"
-    bbox = draw.textbbox((0, 0), author_text, font=FONT_QUOTE_AUTHOR)
+    bbox = draw.textbbox((0, 0), author_text, font=author_font)
     tw = bbox[2] - bbox[0]
-    draw.text((qx + (qw - tw) // 2, qy + qh - 50), author_text, font=FONT_QUOTE_AUTHOR, fill=0)
+    draw.text((qx + (qw - tw) // 2, qy + qh - 50), author_text, font=author_font, fill=0)
 
 def draw_weather_decorations(draw):
     """Black decorations for weather panel (top of right side)."""
