@@ -433,8 +433,10 @@ def draw_weather(draw, weather_data):
 
     bar_y = qy + 95  # Start lower since current weather is more compact
     bar_h = 50  # Bar area height
-    bar_spacing = 5
-    bar_w = (qw - (len(forecast) + 1) * bar_spacing) // len(forecast)
+    bar_w = 20  # Fixed narrow width for elegant look
+    total_width = len(forecast) * bar_w + (len(forecast) - 1) * 15  # bars + spacing
+    start_x = qx + (qw - total_width) // 2  # Center the bars
+    bar_spacing = 15  # More space between bars
 
     # Get temp range for scaling
     all_temps = []
@@ -445,7 +447,7 @@ def draw_weather(draw, weather_data):
     temp_range = temp_max - temp_min if temp_max > temp_min else 10
 
     for i, day in enumerate(forecast):
-        x = qx + bar_spacing + i * (bar_w + bar_spacing)
+        x = start_x + i * (bar_w + bar_spacing)
         center_x = x + bar_w // 2
 
         # Calculate bar heights
