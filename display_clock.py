@@ -542,10 +542,10 @@ def draw_quote(draw, quote_text, quote_author):
 
     for i, size in enumerate(font_sizes):
         quote_font = ImageFont.truetype(
-            os.path.join(BASE_DIR, "fonts", "PlayfairDisplay-Regular.ttf"), size
+            os.path.join(BASE_DIR, "fonts", "PlayfairDisplay-VariableFont_wght.ttf"), size
         )
         author_font = ImageFont.truetype(
-            os.path.join(BASE_DIR, "fonts", "PlayfairDisplay-Italic.ttf"), author_font_sizes[i]
+            os.path.join(BASE_DIR, "fonts", "PlayfairDisplay-Italic-VariableFont_wght.ttf"), author_font_sizes[i]
         )
 
         # Calculate line height based on font size
