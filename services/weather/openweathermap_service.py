@@ -108,14 +108,20 @@ class OpenWeatherMapService(WeatherService):
                     "temps": [],
                     "description": item["weather"][0]["description"],
                     "icon": item["weather"][0]["icon"],
+                    "rain_probs": [],
                 }
 
             daily_data[date_key]["temps"].append(item["main"]["temp"])
+            # Rain probability from 'pop' (probability of precipitation)
+            if "pop" in item:
+                daily_data[date_key]["rain_probs"].append(int(item["pop"] * 100))
 
         # Convert to ForecastDay objects (take first 5 days)
         forecast = []
         for date_str in sorted(daily_data.keys())[:5]:
             day = daily_data[date_str]
+            # Use max rain probability for the day
+            rain_prob = max(day["rain_probs"]) if day["rain_probs"] else 0
             forecast.append(
                 ForecastDay(
                     date=date_str,
@@ -123,6 +129,7 @@ class OpenWeatherMapService(WeatherService):
                     temp_max=max(day["temps"]),
                     description=day["description"],
                     icon=day["icon"],
+                    rain_probability=rain_prob,
                 )
             )
 

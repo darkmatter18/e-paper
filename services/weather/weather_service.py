@@ -22,6 +22,7 @@ class ForecastDay:
     temp_max: float
     description: str
     icon: str
+    rain_probability: int = 0  # Rain probability percentage (0-100)
 
 
 @dataclass

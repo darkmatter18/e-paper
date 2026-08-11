@@ -77,6 +77,10 @@ FONT_WEATHER_LABEL = ImageFont.truetype(
     os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 22
 )
 
+FONT_WEATHER_SMALL = ImageFont.truetype(
+    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 14
+)
+
 
 def hand_endpoint(length, value, total):
     """Point at the tip of a hand. 12 o'clock is up, sweeping clockwise."""
@@ -406,9 +410,9 @@ def draw_weather(draw, weather_data):
     if not forecast:
         return
 
-    bar_y = qy + 120
-    bar_h = weather_h - bar_y - 40
-    bar_spacing = 8
+    bar_y = qy + 115
+    bar_h = 55  # Shorter bars to make room for labels
+    bar_spacing = 5
     bar_w = (qw - (len(forecast) + 1) * bar_spacing) // len(forecast)
 
     # Get temp range for scaling
@@ -421,26 +425,49 @@ def draw_weather(draw, weather_data):
 
     for i, day in enumerate(forecast):
         x = qx + bar_spacing + i * (bar_w + bar_spacing)
+        center_x = x + bar_w // 2
 
         # Calculate bar heights
         max_h = int((day.temp_max - temp_min) / temp_range * bar_h)
         min_h = int((day.temp_min - temp_min) / temp_range * bar_h)
 
-        # Draw bar (min to max range)
+        # Draw bar (min to max range) - outline only
         bar_top = bar_y + bar_h - max_h
         bar_bot = bar_y + bar_h - min_h
-        draw.rectangle([x, bar_top, x + bar_w, bar_bot], fill=0)
+        draw.rectangle([x, bar_top, x + bar_w, bar_bot], outline=0, width=2)
+
+        # Max temp label above bar
+        max_temp = f"{int(day.temp_max)}°"
+        bbox = draw.textbbox((0, 0), max_temp, font=FONT_WEATHER_SMALL)
+        tw = bbox[2] - bbox[0]
+        draw.text((center_x - tw // 2, bar_top - 16), max_temp, font=FONT_WEATHER_SMALL, fill=0)
+
+        # Min temp label inside/below bar
+        min_temp = f"{int(day.temp_min)}°"
+        bbox = draw.textbbox((0, 0), min_temp, font=FONT_WEATHER_SMALL)
+        tw = bbox[2] - bbox[0]
+        draw.text((center_x - tw // 2, bar_bot - 2), min_temp, font=FONT_WEATHER_SMALL, fill=0)
 
         # Weather icon above bar
-        icon_x = x + bar_w // 2
-        icon_y = bar_top - 20
-        draw_weather_icon(draw, day.icon, icon_x, icon_y)
+        icon_y = bar_top - 35
+        draw_weather_icon(draw, day.icon, center_x, icon_y)
 
-        # Day label below
+        # Rain probability if > 0
+        if day.rain_probability > 0:
+            rain_text = f"{day.rain_probability}%"
+            bbox = draw.textbbox((0, 0), rain_text, font=FONT_WEATHER_SMALL)
+            tw = bbox[2] - bbox[0]
+            draw.text((center_x - tw // 2, bar_y + bar_h + 2), rain_text, font=FONT_WEATHER_SMALL, fill=0)
+            # Small droplet icon
+            drop_y = bar_y + bar_h + 18
+            draw.ellipse([center_x - 3, drop_y, center_x + 3, drop_y + 6], fill=0)
+
+        # Day label at bottom
         day_name = datetime.strptime(day.date, "%Y-%m-%d").strftime("%a")
         bbox = draw.textbbox((0, 0), day_name, font=FONT_WEATHER_DAY)
         tw = bbox[2] - bbox[0]
-        draw.text((x + (bar_w - tw) // 2, bar_y + bar_h + 5), day_name, font=FONT_WEATHER_DAY, fill=0)
+        label_y = bar_y + bar_h + 22 if day.rain_probability > 0 else bar_y + bar_h + 2
+        draw.text((center_x - tw // 2, label_y), day_name, font=FONT_WEATHER_DAY, fill=0)
 
 
 def draw_quote(draw, quote_text, quote_author):
