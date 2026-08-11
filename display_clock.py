@@ -424,7 +424,7 @@ def draw_weather(draw, weather_data):
         icon_x = rain_x
 
     # Draw icon aligned with text (adjusted y position)
-    icon_y = y_line - 2  # Align with text baseline
+    icon_y = y_line + 2  # Align with text baseline
     draw_weather_icon(draw, current.icon, icon_x, icon_y)
 
     # Separator line
