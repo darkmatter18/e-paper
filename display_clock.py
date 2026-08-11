@@ -389,19 +389,15 @@ def draw_weather(draw, weather_data):
     qx, qy, qw = 400, 0, 400
     weather_h = 240
 
-    # Current weather in single line: Icon | Temp | Description | Rain%
+    # Current weather in single line: Temp | Description | Rain% | Icon
     current = weather_data.current
 
     # Layout elements horizontally
     y_line = qy + 25
 
-    # Weather icon on left
-    icon_x = qx + 30
-    draw_weather_icon(draw, current.icon, icon_x, y_line)
-
-    # Temperature
+    # Temperature (start from left)
     temp_text = f"{int(current.temperature)}°"
-    temp_x = icon_x + 35
+    temp_x = qx + 30
     draw.text((temp_x, y_line - 10), temp_text, font=FONT_WEATHER_TEMP, fill=0)
 
     # Description
@@ -412,8 +408,8 @@ def draw_weather(draw, weather_data):
     desc_w = bbox[2] - bbox[0]
 
     # Rain probability if > 0
+    rain_x = desc_x + desc_w + 15
     if current.rain_probability > 0:
-        rain_x = desc_x + desc_w + 15
         rain_text = f"{current.rain_probability}%"
         draw.text((rain_x, y_line - 6), rain_text, font=FONT_WEATHER_DAY, fill=0)
         # Droplet icon
@@ -421,6 +417,13 @@ def draw_weather(draw, weather_data):
         drop_x = rain_x + (bbox[2] - bbox[0]) + 4
         drop_y = y_line - 4
         draw.ellipse([drop_x, drop_y, drop_x + 5, drop_y + 8], fill=0)
+        # Weather icon on the right after rain
+        icon_x = drop_x + 15
+    else:
+        # Weather icon right after description if no rain
+        icon_x = rain_x
+
+    draw_weather_icon(draw, current.icon, icon_x, y_line)
 
     # Separator line
     sep_y = qy + 55
