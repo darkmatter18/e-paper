@@ -390,47 +390,63 @@ def draw_weather(draw, weather_data):
     weather_h = 240
 
     # Current weather in single line: Temp | Description | Rain% | Icon
+    # Calculate total width first, then center the entire block
     current = weather_data.current
-
-    # Layout elements horizontally
     y_line = qy + 25
 
-    # All text aligned to same baseline
-    # Temperature (start from left) - larger font
+    # Measure all elements first
     temp_text = f"{int(current.temperature)}°"
-    temp_x = qx + 30
     temp_bbox = draw.textbbox((0, 0), temp_text, font=FONT_WEATHER_TEMP)
-    temp_h = temp_bbox[3] - temp_bbox[1]
-    draw.text((temp_x, y_line - temp_h + 4), temp_text, font=FONT_WEATHER_TEMP, fill=0)
     temp_w = temp_bbox[2] - temp_bbox[0]
+    temp_h = temp_bbox[3] - temp_bbox[1]
 
-    # Description - aligned to same baseline
     desc_text = current.description.title()
-    bbox = draw.textbbox((0, 0), desc_text, font=FONT_WEATHER_DAY)
-    desc_h = bbox[3] - bbox[1]
-    desc_x = temp_x + temp_w + 10
-    draw.text((desc_x, y_line - desc_h + 4), desc_text, font=FONT_WEATHER_DAY, fill=0)
-    desc_w = bbox[2] - bbox[0]
+    desc_bbox = draw.textbbox((0, 0), desc_text, font=FONT_WEATHER_DAY)
+    desc_w = desc_bbox[2] - desc_bbox[0]
+    desc_h = desc_bbox[3] - desc_bbox[1]
 
-    # Rain probability if > 0 - aligned to same baseline
-    rain_x = desc_x + desc_w + 15
+    # Calculate total width
+    spacing = 10  # Space between elements
+    total_w = temp_w + spacing + desc_w
+
+    # Measure rain elements if needed
+    rain_text = ""
+    rain_w = 0
+    rain_h = 0
     if current.rain_probability > 0:
         rain_text = f"{current.rain_probability}%"
         rain_bbox = draw.textbbox((0, 0), rain_text, font=FONT_WEATHER_DAY)
+        rain_w = rain_bbox[2] - rain_bbox[0]
         rain_h = rain_bbox[3] - rain_bbox[1]
+        total_w += spacing + rain_w + 10  # +10 for droplet width
+
+    # Add icon width
+    total_w += spacing + 30  # Weather icon ~20px + spacing
+
+    # Center the entire block
+    start_x = qx + (qw - total_w) // 2
+
+    # Draw temperature
+    draw.text((start_x, y_line - temp_h + 4), temp_text, font=FONT_WEATHER_TEMP, fill=0)
+
+    # Draw description
+    desc_x = start_x + temp_w + spacing
+    draw.text((desc_x, y_line - desc_h + 4), desc_text, font=FONT_WEATHER_DAY, fill=0)
+
+    # Draw rain probability if > 0
+    if current.rain_probability > 0:
+        rain_x = desc_x + desc_w + spacing
         draw.text((rain_x, y_line - rain_h + 4), rain_text, font=FONT_WEATHER_DAY, fill=0)
-        # Droplet icon aligned
-        drop_x = rain_x + (rain_bbox[2] - rain_bbox[0]) + 4
+        # Droplet icon
+        drop_x = rain_x + rain_w + 4
         drop_y = y_line - rain_h + 6
         draw.ellipse([drop_x, drop_y, drop_x + 5, drop_y + 8], fill=0)
-        # Weather icon on the right after rain
-        icon_x = drop_x + 15
+        icon_x = drop_x + 10 + spacing
     else:
-        # Weather icon right after description if no rain
-        icon_x = rain_x
+        icon_x = desc_x + desc_w + spacing
 
-    # Draw icon aligned with text baseline
-    icon_y = y_line - 4  # Align with text baseline
+    # Draw weather icon aligned with text baseline
+    icon_y = y_line - 4
     draw_weather_icon(draw, current.icon, icon_x, icon_y)
 
     # Separator line
