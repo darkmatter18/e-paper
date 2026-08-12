@@ -39,8 +39,16 @@ def to_buffer(image):
     return bytearray(image.convert("1").tobytes("raw"))
 
 
-def full_refresh(epd):
-    """Full display refresh with all widgets."""
+def full_refresh(epd, now):
+    """Full display refresh with all widgets.
+
+    Args:
+        epd: E-paper display object
+        now: Current datetime
+
+    Returns:
+        Clock region image (400x240) for next partial refresh
+    """
     logger.info("Full refresh")
     epd.init()
 
@@ -51,7 +59,7 @@ def full_refresh(epd):
     dr = ImageDraw.Draw(red)
 
     # Draw all widgets with their content
-    clock_widget.draw(db, red_draw=dr)
+    clock_widget.draw(db, red_draw=dr, now=now)
     clock_widget.draw_decorations(db)
     clock_widget.draw_red_decorations(dr)
 
@@ -70,37 +78,52 @@ def full_refresh(epd):
     # Display to e-paper
     epd.display(epd.getbuffer(black), epd.getbuffer(red))
 
-    return black
+    # Return the clock region for next partial refresh
+    return render_clock_region(now)
 
 
-def partial_refresh_with_old(epd, now, old_black):
+def render_clock_region(now):
+    """Render just the clock region (400x240) for partial refresh.
+
+    Args:
+        now: Current datetime
+
+    Returns:
+        PIL Image of clock region only
+    """
+    # Create image for clock region only (not full display)
+    region = Image.new("1", (400, 240), 255)
+    db = ImageDraw.Draw(region)
+
+    # Draw clock widget into the region
+    clock_widget.draw(db, red_draw=None, now=now)
+
+    return region
+
+
+def partial_refresh_with_old(epd, now, old_region):
     """Partial refresh - update only the clock (minute hand) in black.
 
     Args:
         epd: E-paper display object
         now: Current datetime
-        old_black: Previous black canvas (for e-paper controller to know what to erase)
+        old_region: Previous clock region image (400x240) for comparison
 
     Returns:
-        Updated black canvas
+        Updated clock region image
     """
     from lib.waveshare_epd import epdconfig
 
-    # Create new black canvas
-    black = Image.new("1", (epd.width, epd.height), 255)
-    db = ImageDraw.Draw(black)
-
-    # Only draw clock widget (it supports partial refresh)
-    # Red channel is None during partial refresh
-    clock_widget.draw(db, red_draw=None, now=now)
+    # Render new clock region
+    new_region = render_clock_region(now)
 
     # Clock region coordinates (upper-left quadrant: 0,0 to 400,240)
     region_x, region_y = 0, 0
     region_w, region_h = 400, 240
 
-    # Convert old and new canvases to buffers
-    old_buf = to_buffer(old_black)
-    new_buf = to_buffer(black)
+    # Convert old and new REGION images to buffers
+    old_buf = to_buffer(old_region)
+    new_buf = to_buffer(new_region)
 
     # Send partial refresh commands to e-paper controller
     # This sends both old and new buffers so controller knows which pixels to update
@@ -131,7 +154,7 @@ def partial_refresh_with_old(epd, now, old_black):
     epdconfig.delay_ms(100)
     epd.ReadBusy()
 
-    return black
+    return new_region
 
 
 def clock():
@@ -146,7 +169,7 @@ def clock():
 
         # Track state
         last_full = None
-        old_black = None
+        old_region = None  # Track clock region (400x240) for partial refresh
 
         while True:
             now = DateTimeUtil.now()
@@ -160,19 +183,19 @@ def clock():
             )
 
             if need_full:
-                old_black = full_refresh(epd)
+                old_region = full_refresh(epd, now)
                 last_full = now
                 epd.sleep()
                 time.sleep(60)  # Sleep for a minute after full refresh
             else:
                 # Partial refresh: only update clock minute hand
-                if old_black is not None:
+                if old_region is not None:
                     epd.init_part()
-                    old_black = partial_refresh_with_old(epd, now, old_black)
+                    old_region = partial_refresh_with_old(epd, now, old_region)
                     epd.sleep()
                 else:
-                    # Fallback: if we don't have old_black, do full refresh
-                    old_black = full_refresh(epd)
+                    # Fallback: if we don't have old_region, do full refresh
+                    old_region = full_refresh(epd, now)
                     last_full = now
                     epd.sleep()
 
