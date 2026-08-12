@@ -84,6 +84,8 @@ def partial_refresh_with_old(epd, now, old_black):
     Returns:
         Updated black canvas
     """
+    from lib.waveshare_epd import epdconfig
+
     # Create new black canvas
     black = Image.new("1", (epd.width, epd.height), 255)
     db = ImageDraw.Draw(black)
@@ -92,8 +94,42 @@ def partial_refresh_with_old(epd, now, old_black):
     # Red channel is None during partial refresh
     clock_widget.draw(db, red_draw=None, now=now)
 
-    # Partial refresh requires both old and new buffers
-    epd.display_Partial(to_buffer(old_black), to_buffer(black))
+    # Clock region coordinates (upper-left quadrant: 0,0 to 400,240)
+    region_x, region_y = 0, 0
+    region_w, region_h = 400, 240
+
+    # Convert old and new canvases to buffers
+    old_buf = to_buffer(old_black)
+    new_buf = to_buffer(black)
+
+    # Send partial refresh commands to e-paper controller
+    # This sends both old and new buffers so controller knows which pixels to update
+    Xstart = region_x
+    Ystart = region_y
+    Xend = region_x + region_w
+    Yend = region_y + region_h
+
+    epd.send_command(0x91)
+    epd.send_command(0x90)
+    epd.send_data(Xstart // 256)
+    epd.send_data(Xstart % 256)
+    epd.send_data((Xend - 1) // 256)
+    epd.send_data((Xend - 1) % 256)
+    epd.send_data(Ystart // 256)
+    epd.send_data(Ystart % 256)
+    epd.send_data((Yend - 1) // 256)
+    epd.send_data((Yend - 1) % 256)
+    epd.send_data(0x01)
+
+    epd.send_command(0x10)  # Send old buffer
+    epd.send_data2(old_buf)
+
+    epd.send_command(0x13)  # Send new buffer
+    epd.send_data2(new_buf)
+
+    epd.send_command(0x12)  # Refresh
+    epdconfig.delay_ms(100)
+    epd.ReadBusy()
 
     return black
 
