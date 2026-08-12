@@ -7,6 +7,7 @@ from services.weather.weather_service import (
     WeatherData,
     WeatherService,
 )
+from utils import DateTimeUtil
 from utils.http_client import HttpClient
 
 logger = logging.getLogger(__name__)
@@ -51,7 +52,7 @@ class OpenWeatherMapService(WeatherService):
 
             # Get today's rain probability from forecast
             if forecast:
-                today = datetime.now().strftime("%Y-%m-%d")
+                today = DateTimeUtil.now().strftime("%Y-%m-%d")
                 for day in forecast:
                     if day.date == today:
                         current.rain_probability = day.rain_probability
@@ -155,7 +156,7 @@ class OpenWeatherMapService(WeatherService):
             ),
             forecast=[
                 ForecastDay(
-                    date=datetime.now().strftime("%Y-%m-%d"),
+                    date=DateTimeUtil.now().strftime("%Y-%m-%d"),
                     temp_min=15.0,
                     temp_max=25.0,
                     description="unavailable",
