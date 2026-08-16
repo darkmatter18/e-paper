@@ -20,11 +20,14 @@ DISPLAY_W, DISPLAY_H = 800, 480
 # Between full refreshes the minute hand moves in black via partial refresh.
 FULL_REFRESH_MIN = 15
 
-# Initialize widgets (done in clock() function after services are created)
+# Initialize widgets
 clock_widget = ClockWidget()
 date_widget = DateWidget()
 quote_widget = QuoteWidget()
 weather_widget = WeatherWidget()
+
+# All widgets for rendering
+ALL_WIDGETS = [clock_widget, date_widget, weather_widget, quote_widget]
 
 
 def to_buffer(image):
@@ -47,7 +50,7 @@ def full_refresh(epd, now):
         now: Current datetime
 
     Returns:
-        Clock region image (400x240) for next partial refresh
+        Full display frame (800x480) for next partial refresh
     """
     logger.info("Full refresh")
     epd.init()
@@ -59,102 +62,109 @@ def full_refresh(epd, now):
     dr = ImageDraw.Draw(red)
 
     # Draw all widgets with their content
-    clock_widget.draw(db, red_draw=dr, now=now)
-    clock_widget.draw_decorations(db)
-    clock_widget.draw_red_decorations(dr)
-
-    date_widget.draw(db, red_draw=dr)
-    date_widget.draw_decorations(db)
-    date_widget.draw_red_decorations(dr)
-
-    weather_widget.draw(db, red_draw=dr)
-    weather_widget.draw_decorations(db)
-    weather_widget.draw_red_decorations(dr)
-
-    quote_widget.draw(db)
-    quote_widget.draw_decorations(db)
-    quote_widget.draw_red_decorations(dr)
+    for widget in ALL_WIDGETS:
+        widget.draw(db, dr, now=now)
+        widget.draw_decorations(db)
+        widget.draw_red_decorations(dr)
 
     # Display to e-paper
     epd.display(epd.getbuffer(black), epd.getbuffer(red))
 
-    # Return the clock region for next partial refresh
-    return render_clock_region(now)
+    # Return full frame for next partial refresh
+    return black
 
 
-def render_clock_region(now):
-    """Render just the clock region (400x240) for partial refresh.
+def get_partial_refresh_region():
+    """Calculate bounding box encompassing all partial-refresh widgets.
+
+    Returns:
+        tuple: (x, y, width, height) or None if no widgets support partial refresh
+    """
+    regions = [w.region for w in ALL_WIDGETS if w.supports_partial_refresh]
+
+    if not regions:
+        return None
+
+    # Calculate bounding box
+    min_x = min(r.x for r in regions)
+    min_y = min(r.y for r in regions)
+    max_x = max(r.x + r.width for r in regions)
+    max_y = max(r.y + r.height for r in regions)
+
+    return (min_x, min_y, max_x - min_x, max_y - min_y)
+
+
+def render_partial_frame(now):
+    """Render full display (800x480) with only partial-refresh widgets.
 
     Args:
         now: Current datetime
 
     Returns:
-        PIL Image of clock region only
+        PIL Image (800x480) with partial-refresh widgets rendered
     """
-    # Create image for clock region only (not full display)
-    region = Image.new("1", (400, 240), 255)
-    db = ImageDraw.Draw(region)
+    black = Image.new("1", (DISPLAY_W, DISPLAY_H), 255)
+    db = ImageDraw.Draw(black)
 
-    # Draw clock widget into the region
-    clock_widget.draw(db, red_draw=None, now=now)
+    # Each widget renders at its own coordinates
+    for widget in ALL_WIDGETS:
+        if widget.supports_partial_refresh:
+            widget.draw(db, red_draw=None, now=now)
 
-    return region
+    return black
 
 
-def partial_refresh_with_old(epd, now, old_region):
-    """Partial refresh - update only the clock (minute hand) in black.
+def partial_refresh(epd, now, old_frame):
+    """Partial refresh all widgets that support it.
 
     Args:
         epd: E-paper display object
         now: Current datetime
-        old_region: Previous clock region image (400x240) for comparison
+        old_frame: Previous full display frame (800x480)
 
     Returns:
-        Updated clock region image
+        New full display frame (800x480)
     """
     from lib.waveshare_epd import epdconfig
 
-    # Render new clock region
-    new_region = render_clock_region(now)
+    # Render new frame
+    new_frame = render_partial_frame(now)
 
-    # Clock region coordinates (upper-left quadrant: 0,0 to 400,240)
-    region_x, region_y = 0, 0
-    region_w, region_h = 400, 240
+    # Get bounding region
+    region = get_partial_refresh_region()
+    if not region:
+        return old_frame  # No partial refresh widgets
 
-    # Convert old and new REGION images to buffers
-    old_buf = to_buffer(old_region)
-    new_buf = to_buffer(new_region)
+    x, y, w, h = region
 
-    # Send partial refresh commands to e-paper controller
-    # This sends both old and new buffers so controller knows which pixels to update
-    Xstart = region_x
-    Ystart = region_y
-    Xend = region_x + region_w
-    Yend = region_y + region_h
+    # Convert to buffers
+    old_buf = to_buffer(old_frame)
+    new_buf = to_buffer(new_frame)
 
+    # Send partial refresh commands
     epd.send_command(0x91)
     epd.send_command(0x90)
-    epd.send_data(Xstart // 256)
-    epd.send_data(Xstart % 256)
-    epd.send_data((Xend - 1) // 256)
-    epd.send_data((Xend - 1) % 256)
-    epd.send_data(Ystart // 256)
-    epd.send_data(Ystart % 256)
-    epd.send_data((Yend - 1) // 256)
-    epd.send_data((Yend - 1) % 256)
+    epd.send_data(x // 256)
+    epd.send_data(x % 256)
+    epd.send_data((x + w - 1) // 256)
+    epd.send_data((x + w - 1) % 256)
+    epd.send_data(y // 256)
+    epd.send_data(y % 256)
+    epd.send_data((y + h - 1) // 256)
+    epd.send_data((y + h - 1) % 256)
     epd.send_data(0x01)
 
-    epd.send_command(0x10)  # Send old buffer
+    epd.send_command(0x10)  # Old buffer
     epd.send_data2(old_buf)
 
-    epd.send_command(0x13)  # Send new buffer
+    epd.send_command(0x13)  # New buffer
     epd.send_data2(new_buf)
 
     epd.send_command(0x12)  # Refresh
     epdconfig.delay_ms(100)
     epd.ReadBusy()
 
-    return new_region
+    return new_frame
 
 
 def clock():
@@ -169,7 +179,7 @@ def clock():
 
         # Track state
         last_full = None
-        old_region = None  # Track clock region (400x240) for partial refresh
+        old_frame = None  # Track full display frame (800x480) for partial refresh
 
         while True:
             now = DateTimeUtil.now()
@@ -183,19 +193,19 @@ def clock():
             )
 
             if need_full:
-                old_region = full_refresh(epd, now)
+                old_frame = full_refresh(epd, now)
                 last_full = now
                 epd.sleep()
                 time.sleep(60)  # Sleep for a minute after full refresh
             else:
-                # Partial refresh: only update clock minute hand
-                if old_region is not None:
+                # Partial refresh: update all widgets that support it
+                if old_frame is not None:
                     epd.init_part()
-                    old_region = partial_refresh_with_old(epd, now, old_region)
+                    old_frame = partial_refresh(epd, now, old_frame)
                     epd.sleep()
                 else:
-                    # Fallback: if we don't have old_region, do full refresh
-                    old_region = full_refresh(epd, now)
+                    # Fallback: if we don't have old_frame, do full refresh
+                    old_frame = full_refresh(epd, now)
                     last_full = now
                     epd.sleep()
 
