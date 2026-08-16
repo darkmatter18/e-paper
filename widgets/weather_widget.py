@@ -16,10 +16,10 @@ Layout:
     - Forecast section (y=95-240): Five vertical bars with annotations
 
 Configuration:
-    Requires environment variables in .env:
-    - OPENWEATHER_API_KEY: API key for OpenWeatherMap service
-    - LATITUDE: Location latitude (default: 23.426022)
-    - LONGITUDE: Location longitude (default: 87.550644)
+    Uses Pydantic settings from settings.weather:
+    - api_key: API key for OpenWeatherMap service (WEATHER_API_KEY)
+    - latitude: Location latitude (WEATHER_LATITUDE, default: 23.426022)
+    - longitude: Location longitude (WEATHER_LONGITUDE, default: 87.550644)
 
 Weather Icons Font:
     Uses Weather Icons webfont (weathericons-regular-webfont.ttf) with Unicode
@@ -36,6 +36,7 @@ from PIL import ImageDraw, ImageFont
 
 from services.weather import WeatherService
 from services.weather.openweathermap_service import OpenWeatherMapService
+from settings import get_settings
 from widgets.widget import Widget, WidgetRegion
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -91,29 +92,28 @@ class WeatherWidget(Widget):
     Attributes:
         region: WidgetRegion(x=400, y=0, width=400, height=240) - top-right area
         weather_service: OpenWeatherMapService instance for fetching weather data
-        lat: Location latitude from LATITUDE env var (default: 23.426022)
-        lon: Location longitude from LONGITUDE env var (default: 87.550644)
+        lat: Location latitude from settings.weather.latitude
+        lon: Location longitude from settings.weather.longitude
     """
 
     def __init__(self):
         """Initialize weather widget with service and location.
 
-        Reads configuration from environment variables:
-        - OPENWEATHER_API_KEY: Required for API access
-        - LATITUDE: Location latitude (defaults to 23.426022)
-        - LONGITUDE: Location longitude (defaults to 87.550644)
+        Reads configuration from Pydantic settings (settings.weather):
+        - api_key: Required for API access (WEATHER_API_KEY env var)
+        - latitude: Location latitude (WEATHER_LATITUDE env var, default: 23.426022)
+        - longitude: Location longitude (WEATHER_LONGITUDE env var, default: 87.550644)
 
         Raises:
-            ValueError: If environment variables contain invalid numeric values.
-            KeyError: If OPENWEATHER_API_KEY is not set (handled by service layer).
+            KeyError: If WEATHER_API_KEY is not set (handled by service layer).
         """
         super().__init__(WidgetRegion(x=400, y=0, width=400, height=240))
-        api_key = os.getenv("OPENWEATHER_API_KEY", "")
-        self.weather_service: WeatherService = OpenWeatherMapService(api_key)
+        settings = get_settings()
+        self.weather_service: WeatherService = OpenWeatherMapService(settings.weather.api_key)
 
-        # Weather location from environment (defaults to coordinates in West Bengal, India)
-        self.lat = float(os.getenv("LATITUDE", "23.426022"))
-        self.lon = float(os.getenv("LONGITUDE", "87.550644"))
+        # Weather location from settings (defaults to coordinates in West Bengal, India)
+        self.lat = settings.weather.latitude
+        self.lon = settings.weather.longitude
 
     def draw(self, black_draw: ImageDraw.ImageDraw, red_draw: ImageDraw.ImageDraw | None = None, **kwargs):
         """Draw weather information with current conditions and forecast.

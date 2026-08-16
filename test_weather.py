@@ -1,16 +1,16 @@
 """Test weather service integration without hardware."""
-import os
-
 from dotenv import load_dotenv
 
 from services.weather import OpenWeatherMapService
+from settings import get_settings
 
 load_dotenv()
 
-# Test weather service
-api_key = os.getenv("OPENWEATHER_API_KEY", "")
-lat = float(os.getenv("LATITUDE", ""))
-lon = float(os.getenv("LONGITUDE", ""))
+# Test weather service with Pydantic settings
+settings = get_settings()
+api_key = settings.weather.api_key
+lat = settings.weather.latitude
+lon = settings.weather.longitude
 
 weather_service = OpenWeatherMapService(api_key)
 
