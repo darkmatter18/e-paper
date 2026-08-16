@@ -53,7 +53,7 @@ def to_buffer(image: Image.Image) -> bytearray:
     return bytearray(image.convert("1").tobytes("raw"))
 
 
-def full_refresh(epd: epd7in5b_V2.EPD, now, state_manager: PartialStateManager) -> None:
+def full_refresh(epd: epd7in5b_V2.EPD, state_manager: PartialStateManager) -> None:
     """Perform full display refresh with all widgets including red channel.
 
     Full refresh (flashing) is required to activate or erase red pigment on the
@@ -64,8 +64,6 @@ def full_refresh(epd: epd7in5b_V2.EPD, now, state_manager: PartialStateManager) 
 
     Args:
         epd: Waveshare EPD display object (epd7in5b_V2.EPD instance).
-        now: Current datetime object (timezone-aware, IST). Passed to widgets
-             for rendering time-dependent content.
         state_manager: PartialStateManager instance to update with new widget
                       states for next partial refresh cycle.
 
@@ -89,7 +87,7 @@ def full_refresh(epd: epd7in5b_V2.EPD, now, state_manager: PartialStateManager) 
 
     # Render all widgets with content, decorations, and red accents
     for widget in ALL_WIDGETS:
-        widget.draw(db, dr, now=now)
+        widget.draw(db, dr)
         widget.draw_decorations(db)
         widget.draw_red_decorations(dr)
 
@@ -120,7 +118,7 @@ def extract_region(image: Image.Image, x: int, y: int, width: int, height: int) 
     return image.crop((x, y, x + width, y + height))
 
 
-def partial_refresh(epd: epd7in5b_V2.EPD, now, state_manager: PartialStateManager) -> None:
+def partial_refresh(epd: epd7in5b_V2.EPD, state_manager: PartialStateManager) -> None:
     """Perform partial refresh for all widgets that support it (black channel only).
 
     Partial refresh updates only changed pixels without flashing, but can only modify
@@ -133,8 +131,6 @@ def partial_refresh(epd: epd7in5b_V2.EPD, now, state_manager: PartialStateManage
     Args:
         epd: Waveshare EPD display object (epd7in5b_V2.EPD instance), must be
              initialized for partial refresh (epd.init_part()).
-        now: Current datetime object (timezone-aware, IST). Passed to widgets
-             for rendering time-dependent content.
         state_manager: PartialStateManager containing previous regions for comparison.
                       If no previous state exists for a widget, that widget is skipped.
 
@@ -178,7 +174,7 @@ def partial_refresh(epd: epd7in5b_V2.EPD, now, state_manager: PartialStateManage
         region = widget.region
         temp_full = Image.new("1", (DISPLAY_W, DISPLAY_H), 255)
         temp_draw = ImageDraw.Draw(temp_full)
-        widget.draw(temp_draw, red_draw=None, now=now)
+        widget.draw(temp_draw, red_draw=None)
 
         # Extract only the widget's region from temporary image
         new_region = extract_region(
@@ -285,24 +281,23 @@ def clock() -> None:
 
             if need_full:
                 # Full refresh: all widgets with red channel
-                full_refresh(epd, now, state_manager)
+                full_refresh(epd, state_manager)
                 last_full = now
                 epd.sleep()  # Put display in low-power mode
-                time.sleep(60)  # Wait one minute before next cycle
             else:
                 # Partial refresh: only widgets that support it (black channel)
                 if state_manager.has_state():
                     epd.init_part()  # Initialize display for partial refresh
-                    partial_refresh(epd, now, state_manager)
+                    partial_refresh(epd, state_manager)
                     epd.sleep()
                 else:
                     # Fallback: no previous state available, do full refresh
                     logger.warning("No state available for partial refresh, falling back to full refresh")
-                    full_refresh(epd, now, state_manager)
+                    full_refresh(epd, state_manager)
                     last_full = now
                     epd.sleep()
 
-                time.sleep(60)  # Wait one minute before next cycle
+            time.sleep(60)  # Wait one minute before next cycle
 
     except OSError as e:
         # Hardware communication error (SPI/GPIO issue)
