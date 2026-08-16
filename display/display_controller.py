@@ -293,7 +293,7 @@ class Display:
             logger.error(f"Hardware error: {e}")
             self.cleanup()
 
-    def _process_command(self, command_queue: Queue | None) -> bool:
+    def _process_command(self, command_queue: Queue) -> bool:
         """Process commands from queue.
 
         Args:
