@@ -51,5 +51,5 @@ def create_todays_weather_screen() -> Screen:
         widgets=[
             TodaysWeatherWidget(),
         ],
-        name="todays_weather",
+        name="Today's Weather",
     )

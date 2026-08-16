@@ -33,5 +33,5 @@ def create_datetime_weather_forecast_screen() -> Screen:
             WeatherWidget(),
             QuoteWidget(),
         ],
-        name="all",
+        name="Datetime Weather Forecast",
     )
