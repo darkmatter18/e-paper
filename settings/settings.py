@@ -91,6 +91,21 @@ class TimezoneSettings(BaseSettings):
     )
 
 
+class LoggingSettings(BaseSettings):
+    """Logging configuration settings."""
+
+    level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(
+        default="INFO",
+        description="Logging level (DEBUG, INFO, WARNING, ERROR)",
+    )
+
+    model_config = SettingsConfigDict(
+        env_prefix="LOG_",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+
 class Settings(BaseSettings):
     """Main application settings.
 
@@ -111,11 +126,13 @@ class Settings(BaseSettings):
         TIMEZONE_NAME: Timezone name (default: IST)
         TIMEZONE_UTC_OFFSET_HOURS: Hours offset from UTC (default: 5)
         TIMEZONE_UTC_OFFSET_MINUTES: Minutes offset from UTC (default: 30)
+        LOG_LEVEL: Logging level - DEBUG/INFO/WARNING/ERROR (default: INFO)
     """
 
     display: DisplaySettings = Field(default_factory=DisplaySettings)
     weather: WeatherSettings = Field(default_factory=WeatherSettings)
     timezone: TimezoneSettings = Field(default_factory=TimezoneSettings)
+    logging: LoggingSettings = Field(default_factory=LoggingSettings)
 
     model_config = SettingsConfigDict(
         env_file=".env",

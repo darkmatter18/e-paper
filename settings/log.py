@@ -1,6 +1,14 @@
-import os
+"""Logging configuration using Pydantic settings.
 
-DEBUG = os.getenv("ENV", "TEST") in ["TEST", "LOCAL"]
+This module provides the default logging configuration dictionary for the application.
+Logging level is controlled via Pydantic settings (LOG_LEVEL environment variable).
+"""
+
+from settings.settings import get_settings
+
+# Get logging level from Pydantic settings
+_settings = get_settings()
+LOG_LEVEL = _settings.logging.level
 
 DEFAULT_LOGGING = {
     "version": 1,
@@ -13,7 +21,7 @@ DEFAULT_LOGGING = {
     },
     "handlers": {
         "console": {
-            "level": "DEBUG" if DEBUG else "INFO",
+            "level": LOG_LEVEL,
             "class": "logging.StreamHandler",
             "formatter": "main_formatter",
         }
@@ -21,25 +29,13 @@ DEFAULT_LOGGING = {
     "loggers": {
         "": {
             "handlers": ["console"],
-            "level": "DEBUG" if DEBUG else "INFO",
+            "level": LOG_LEVEL,
         },
-        # # Remove all pymongo.* loggers
+        # Keep httpcore at INFO to avoid excessive debug output
         "httpcore": {
             "handlers": ["console"],
             "level": "INFO",
             "propagate": False,
         },
-        # "fastapi": {
-        #     "handlers": ["console"],
-        #     "level": "DEBUG" if DEBUG else "INFO",
-        # },
-        # "uvicorn": {
-        #     "handlers": ["console"],
-        #     "level": "DEBUG" if DEBUG else "INFO",
-        # },
-        # "gunicorn.error": {
-        #     "handlers": ["console"],
-        #     "level": "DEBUG" if DEBUG else "INFO",
-        # },
     },
 }
