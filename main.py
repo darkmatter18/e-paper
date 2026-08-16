@@ -4,14 +4,15 @@ import logging
 
 from dotenv import load_dotenv
 
+# Load .env file into os.environ before any imports that call get_settings()
+# Pydantic BaseSettings reads from os.environ, not directly from .env file
+load_dotenv()
+
 from engine import Engine
 from settings import get_settings
 from utils import Screen
 from utils.log import configure_logging
 from widgets import ClockWidget, DateWidget, QuoteWidget, WeatherWidget
-
-# Load environment variables first
-load_dotenv()
 
 # Get settings
 settings = get_settings()

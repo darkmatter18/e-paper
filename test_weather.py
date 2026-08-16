@@ -1,10 +1,11 @@
 """Test weather service integration without hardware."""
 from dotenv import load_dotenv
 
+# Load .env file before importing modules that use settings
+load_dotenv()
+
 from services.weather import OpenWeatherMapService
 from settings import get_settings
-
-load_dotenv()
 
 # Test weather service with Pydantic settings
 settings = get_settings()

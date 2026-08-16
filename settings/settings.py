@@ -110,8 +110,11 @@ class Settings(BaseSettings):
     """Main application settings.
 
     Aggregates all settings subsections and provides a single point of access
-    for all configuration values. Settings are loaded from environment variables
-    and .env file.
+    for all configuration values. Settings are loaded from environment variables.
+
+    Note:
+        The .env file is loaded by load_dotenv() in main.py before any imports.
+        Pydantic BaseSettings then reads from os.environ (populated by load_dotenv).
 
     Hardware Constants:
         DisplaySettings.WIDTH: Display width in pixels (800 - fixed)
@@ -135,8 +138,6 @@ class Settings(BaseSettings):
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
 
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
         case_sensitive=False,
         extra="allow",  # Allow extra env vars for nested settings
     )
