@@ -242,7 +242,7 @@ class Display:
 
         logger.info(f"Screen switched to '{new_screen.name}' successfully")
 
-    def run(self, command_queue: Queue | None = None) -> None:
+    def run(self, command_queue: Queue) -> None:
         """Main rendering loop - manages display update cycles.
 
         Orchestrates the display refresh strategy:
