@@ -37,6 +37,11 @@ def test_api():
 
         # Create app
         app = create_app()
+
+        # Manually set app.state since TestClient doesn't fully initialize lifespan
+        app.state.engine_manager = mock_manager
+        app.state.current_screen = "datetime_weather_forecast"
+
         client = TestClient(app)
 
         # Test 1: Root endpoint
@@ -65,10 +70,23 @@ def test_api():
         print(f"   Response: {response.json()}")
         assert response.status_code == 200
         assert response.json()["screen"] == "todays_weather"
+        assert "Switched" in response.json()["message"]
         print("   ✓ Screen switch works")
 
-        # Test 4: Switch screen (invalid)
-        print("\n4. Testing PUT /api/v1/screen (invalid screen)")
+        # Test 4: Switch to same screen (no-op)
+        print("\n4. Testing PUT /api/v1/screen (same screen)")
+        response = client.put(
+            "/api/v1/screen", json={"screen": "todays_weather"}
+        )
+        print(f"   Status: {response.status_code}")
+        print(f"   Response: {response.json()}")
+        assert response.status_code == 200
+        assert response.json()["screen"] == "todays_weather"
+        assert "Already on" in response.json()["message"]
+        print("   ✓ Duplicate screen switch properly handled")
+
+        # Test 5: Switch screen (invalid)
+        print("\n5. Testing PUT /api/v1/screen (invalid screen)")
         response = client.put(
             "/api/v1/screen", json={"screen": "nonexistent"}
         )
@@ -77,8 +95,8 @@ def test_api():
         assert response.status_code == 400
         print("   ✓ Invalid screen properly rejected")
 
-        # Test 5: Available screens
-        print("\n5. Checking available screens")
+        # Test 6: Available screens
+        print("\n6. Checking available screens")
         response = client.get("/")
         screens = response.json()["available_screens"]
         print(f"   Available: {screens}")
