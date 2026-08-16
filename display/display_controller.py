@@ -242,14 +242,13 @@ class Display:
 
         logger.info(f"Screen switched to '{new_screen.name}' successfully")
 
-    def run(self, command_queue: Optional[Queue] = None) -> None:
+    def run(self, command_queue: Queue | None = None) -> None:
         """Main rendering loop - manages display update cycles.
 
         Orchestrates the display refresh strategy:
         - Full refresh every N minutes and at top of hour
         - Partial refresh every minute between full refreshes
         - Power management (display sleep between updates)
-        - Timing alignment to minute boundaries
         - Command processing (if command_queue provided)
 
         Args:
@@ -267,105 +266,25 @@ class Display:
             - Runs indefinitely (blocking call)
             - Logs refresh cycles and errors
         """
+        last_minute = None
+
         try:
             while True:
-                # Check for commands (non-blocking)
-                if command_queue:
-                    try:
-                        command = command_queue.get_nowait()
-                        logger.info(f"Received command: {command['type']}")
+                # Step 1: Check for commands (non-blocking)
+                if self._process_command(command_queue):
+                    break  # Shutdown requested
 
-                        if command['type'] == 'shutdown':
-                            logger.info("Shutting down engine...")
-                            break
-
-                        elif command['type'] == 'switch_screen':
-                            from screens import get_screen
-                            screen_name = command['screen_name']
-                            new_screen = get_screen(screen_name)
-                            self.switch_screen(new_screen)
-                            # Skip normal refresh cycle this iteration
-                            continue
-
-                    except queue.Empty:
-                        pass  # No commands, continue normal operation
-
-                # Get current time in IST timezone
+                # Step 2: Check if we're at a new minute
                 now = DateTimeUtil.now()
-                minute = now.minute
+                current_minute = now.minute
 
-                # Determine refresh type based on time and interval
-                need_full = (
-                    self.last_full is None  # First run
-                    or minute % self.full_refresh_interval == 0  # Interval reached
-                    or minute == 0  # Top of every hour
-                )
+                if current_minute != last_minute:
+                    # New minute - process refresh
+                    self._process_refresh(now)
+                    last_minute = current_minute
 
-                if need_full:
-                    # Full refresh: all widgets with red channel
-                    self.full_refresh()
-                    self.last_full = now
-                    self.epd.sleep()
-                else:
-                    # Check if any widgets support partial refresh
-                    has_partial_refresh_widgets = any(
-                        w.supports_partial_refresh for w in self.screen.widgets
-                    )
-
-                    if has_partial_refresh_widgets:
-                        # Partial refresh: only widgets that support it (black channel)
-                        if self.state_manager.has_state():
-                            self.epd.init_part()
-                            self.partial_refresh()
-                            self.epd.sleep()
-                        else:
-                            # Fallback: no previous state, do full refresh
-                            logger.warning(
-                                "No state for partial refresh, falling back to full refresh"
-                            )
-                            self.full_refresh()
-                            self.last_full = now
-                            self.epd.sleep()
-                    else:
-                        # No partial refresh widgets - skip until next full refresh
-                        logger.debug(
-                            "No partial-refresh widgets, skipping refresh this minute"
-                        )
-
-                # Calculate sleep time to wake at start of next minute
-                now_after_render = DateTimeUtil.now()
-                seconds_elapsed = now_after_render.second + (
-                    now_after_render.microsecond / 1_000_000
-                )
-                sleep_time = 60 - seconds_elapsed
-
-                # Ensure we always sleep at least a little to avoid tight loop
-                if sleep_time < 0.1:
-                    sleep_time = 60 + sleep_time  # Move to next minute
-
-                logger.info(f"Sleeping for {sleep_time:.2f}s until next minute")
-
-                # Sleep in 1-second chunks to check for shutdown commands
-                sleep_remaining = sleep_time
-                while sleep_remaining > 0:
-                    chunk = min(1.0, sleep_remaining)
-                    time.sleep(chunk)
-                    sleep_remaining -= chunk
-
-                    # Check for shutdown command during sleep
-                    if command_queue:
-                        try:
-                            command = command_queue.get_nowait()
-                            if command['type'] == 'shutdown':
-                                logger.info("Received shutdown command during sleep")
-                                # Break out of both loops
-                                raise KeyboardInterrupt
-                            elif command['type'] == 'switch_screen':
-                                # Put command back for next iteration
-                                command_queue.put(command)
-                                break
-                        except queue.Empty:
-                            pass
+                # Step 3: Sleep briefly before next check
+                time.sleep(1.0)
 
         except KeyboardInterrupt:
             logger.info("Engine received shutdown signal")
@@ -373,6 +292,94 @@ class Display:
         except OSError as e:
             logger.error(f"Hardware error: {e}")
             self.cleanup()
+
+    def _process_command(self, command_queue: Queue | None) -> bool:
+        """Process commands from queue.
+
+        Args:
+            command_queue: Command queue to check
+
+        Returns:
+            True if shutdown requested, False otherwise
+        """
+        if not command_queue:
+            return False
+
+        try:
+            command = command_queue.get_nowait()
+            logger.info(f"Received command: {command['type']}")
+
+            if command['type'] == 'shutdown':
+                logger.info("Shutting down engine...")
+                return True
+
+            elif command['type'] == 'switch_screen':
+                from screens import get_screen
+                screen_name = command['screen_name']
+                new_screen = get_screen(screen_name)
+                self.switch_screen(new_screen)
+
+        except queue.Empty:
+            pass
+
+        return False
+
+    def _process_refresh(self, now) -> None:
+        """Process display refresh for current minute.
+
+        Args:
+            now: Current datetime
+        """
+        minute = now.minute
+
+        # Determine if full refresh is needed
+        need_full = (
+            self.last_full is None  # First run
+            or minute % self.full_refresh_interval == 0  # Interval reached
+            or minute == 0  # Top of every hour
+        )
+
+        if need_full:
+            self._do_full_refresh(now)
+        else:
+            self._do_partial_refresh(now)
+
+    def _do_full_refresh(self, now) -> None:
+        """Execute full refresh cycle.
+
+        Args:
+            now: Current datetime
+        """
+        logger.info("Executing full refresh")
+        self.full_refresh()
+        self.last_full = now
+        self.epd.sleep()
+
+    def _do_partial_refresh(self, now) -> None:
+        """Execute partial refresh cycle if widgets support it.
+
+        Args:
+            now: Current datetime
+        """
+        # Check if any widgets support partial refresh
+        has_partial_widgets = any(
+            w.supports_partial_refresh for w in self.screen.widgets
+        )
+
+        if not has_partial_widgets:
+            logger.debug("No partial-refresh widgets, skipping refresh")
+            return
+
+        # Execute partial refresh if we have previous state
+        if self.state_manager.has_state():
+            logger.info("Executing partial refresh")
+            self.epd.init_part()
+            self.partial_refresh()
+            self.epd.sleep()
+        else:
+            # Fallback: no previous state, do full refresh
+            logger.warning("No state for partial refresh, falling back to full refresh")
+            self._do_full_refresh(now)
 
 
     def cleanup(self) -> None:
