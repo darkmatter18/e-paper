@@ -19,7 +19,6 @@ Hardware:
 """
 
 import logging
-from datetime import datetime
 
 from PIL import ImageDraw, ImageFont
 
@@ -139,18 +138,15 @@ class TodaysWeatherWidget(Widget):
         tw = bbox[2] - bbox[0]
         black_draw.text((650 - tw // 2, 85), desc_text, font=FONT_CURRENT_DESC, fill=0)
 
-        # Stats bar (centered, compact)
+        # Stats bar (centered, compact) - using available CurrentWeather fields
         stats_parts = [
             f"Feels {int(current.feels_like)}°",
-            f"💧 {current.humidity}%",
-            f"💨 {int(current.wind_speed)} mph",
+            f"💧 Humidity {current.humidity}%",
         ]
 
-        # Add sunrise/sunset if available
-        if hasattr(current, 'sunrise') and current.sunrise:
-            stats_parts.append(f"⬆{current.sunrise.strftime('%-I:%M%p')}")
-        if hasattr(current, 'sunset') and current.sunset:
-            stats_parts.append(f"⬇{current.sunset.strftime('%-I:%M%p')}")
+        # Add rain probability if > 0
+        if current.rain_probability > 0:
+            stats_parts.append(f"🌧 Rain {current.rain_probability}%")
 
         stats_text = " │ ".join(stats_parts)
         bbox = black_draw.textbbox((0, 0), stats_text, font=FONT_STATS)
@@ -184,7 +180,6 @@ class TodaysWeatherWidget(Widget):
         icons = []
         times = []
 
-        now = DateTimeUtil.now()
         for i, day in enumerate(forecast):
             temps.append(day.temp_max)
             icons.append(day.icon)
@@ -196,8 +191,7 @@ class TodaysWeatherWidget(Widget):
         min_temp = min(temps)
         max_temp = max(temps)
         temp_range = max_temp - min_temp
-        if temp_range < 10:
-            temp_range = 10  # Minimum range for display
+        temp_range = max(temp_range, 10)  # Minimum range for display
 
         # Draw Y-axis labels (5 levels)
         num_y_labels = 5

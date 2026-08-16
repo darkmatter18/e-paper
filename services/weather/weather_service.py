@@ -232,4 +232,3 @@ class WeatherService(ABC):
             Some providers charge per API call. Aggressive caching (15-30 min)
             is recommended. Round coordinates to limit cache key space.
         """
-        pass
