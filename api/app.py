@@ -112,6 +112,14 @@ def create_app() -> FastAPI:
                 detail=f"Unknown screen '{request.screen}'. Available: {list(AVAILABLE_SCREENS.keys())}",
             )
 
+        # Check if already on requested screen
+        if app.state.current_screen == request.screen:
+            return ScreenSwitchResponse(
+                success=True,
+                screen=request.screen,
+                message=f"Already on '{request.screen}' screen",
+            )
+
         manager: EngineProcessManager = app.state.engine_manager
 
         if not manager.is_alive():
