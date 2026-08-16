@@ -5,10 +5,17 @@ Settings are loaded once and cached for the application lifetime.
 """
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Project root directory (e-paper/)
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Fonts directory
+FONTS_DIR = BASE_DIR / "fonts"
 
 
 class DisplaySettings(BaseSettings):

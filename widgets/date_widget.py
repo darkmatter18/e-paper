@@ -29,23 +29,14 @@ import os
 
 from PIL import ImageDraw, ImageFont
 
+from fonts import FONT_GEOMINI, FONT_HENNYPENNY
 from utils.datetime_util import DateTimeUtil
 from widgets.widget import Widget, WidgetRegion
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
 # Date display fonts
-FONT_DATE_DAY = ImageFont.truetype(
-    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 60
-)  # Weekday font (large, bold sans-serif)
-
-FONT_DATE_NUM = ImageFont.truetype(
-    os.path.join(BASE_DIR, "fonts", "HennyPenny-Regular.ttf"), 72
-)  # Day number font (decorative serif, emphasized)
-
-FONT_DATE_MY = ImageFont.truetype(
-    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 44
-)  # Month and year font (readable sans-serif)
+FONT_DATE_DAY = ImageFont.truetype(str(FONT_GEOMINI), 60)  # Weekday
+FONT_DATE_NUM = ImageFont.truetype(str(FONT_HENNYPENNY), 72)  # Day number
+FONT_DATE_MY = ImageFont.truetype(str(FONT_GEOMINI), 44)  # Month and year
 
 
 class DateWidget(Widget):

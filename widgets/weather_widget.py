@@ -30,33 +30,19 @@ Color Usage:
     - Black: All text except temperature, icons, bars, decorations
     - Red: Current temperature, max temperature labels (emphasis)
 """
-import os
-
 from PIL import ImageDraw, ImageFont
 
+from fonts import FONT_RIGHTEOUS, FONT_WEATHER_ICONS
 from services.weather import WeatherService
 from services.weather.openweathermap_service import OpenWeatherMapService
 from settings import get_settings
 from widgets.widget import Widget, WidgetRegion
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-# Weather display fonts (using Righteous for clean, bold sans-serif appearance)
-FONT_WEATHER_TEMP = ImageFont.truetype(
-    os.path.join(BASE_DIR, "fonts", "Righteous-Regular.ttf"), 28
-)  # Current temperature (large, emphasized)
-
-FONT_WEATHER_DAY = ImageFont.truetype(
-    os.path.join(BASE_DIR, "fonts", "Righteous-Regular.ttf"), 18
-)  # Weather description text
-
-FONT_WEATHER_SMALL = ImageFont.truetype(
-    os.path.join(BASE_DIR, "fonts", "Righteous-Regular.ttf"), 14
-)  # Forecast details (temps, percentages, day labels)
-
-FONT_WEATHER_ICON = ImageFont.truetype(
-    os.path.join(BASE_DIR, "fonts", "weathericons-regular-webfont.ttf"), 24
-)  # Weather Icons webfont for meteorological symbols
+# Weather display fonts
+FONT_WEATHER_TEMP = ImageFont.truetype(str(FONT_RIGHTEOUS), 28)  # Current temperature
+FONT_WEATHER_DAY = ImageFont.truetype(str(FONT_RIGHTEOUS), 18)  # Weather description
+FONT_WEATHER_SMALL = ImageFont.truetype(str(FONT_RIGHTEOUS), 14)  # Forecast details
+FONT_WEATHER_ICON = ImageFont.truetype(str(FONT_WEATHER_ICONS), 24)  # Weather icons
 
 # OpenWeatherMap icon code to Weather Icons font character mapping
 # Maps OWM 3-character codes (condition + day/night) to Unicode private use characters

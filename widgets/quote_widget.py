@@ -35,14 +35,13 @@ Data Source:
     Quotes fetched from ZenQuotes API via ZenQuotesService with daily caching.
 """
 import logging
-import os
 
 from PIL import ImageDraw, ImageFont
 
+from fonts import FONT_GEOMINI, FONT_PLAYFAIR, FONT_PLAYFAIR_ITALIC
 from services.quote.zenquotes_service import ZenQuotesService
 from widgets.widget import Widget, WidgetRegion
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 logger = logging.getLogger(__name__)
 
 
@@ -128,22 +127,13 @@ class QuoteWidget(Widget):
 
         for i, size in enumerate(font_sizes):
             try:
-                quote_font = ImageFont.truetype(
-                    os.path.join(BASE_DIR, "fonts", "PlayfairDisplay-VariableFont_wght.ttf"), size
-                )
-                author_font = ImageFont.truetype(
-                    os.path.join(BASE_DIR, "fonts", "PlayfairDisplay-Italic-VariableFont_wght.ttf"),
-                    author_font_sizes[i]
-                )
+                quote_font = ImageFont.truetype(str(FONT_PLAYFAIR), size)
+                author_font = ImageFont.truetype(str(FONT_PLAYFAIR_ITALIC), author_font_sizes[i])
             except OSError:
                 # Fallback to Geomini if Playfair not available
                 logger.warning(f"Playfair Display not found, using fallback font for size {size}")
-                quote_font = ImageFont.truetype(
-                    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), size
-                )
-                author_font = ImageFont.truetype(
-                    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), author_font_sizes[i]
-                )
+                quote_font = ImageFont.truetype(str(FONT_GEOMINI), size)
+                author_font = ImageFont.truetype(str(FONT_GEOMINI), author_font_sizes[i])
 
             # Calculate line height based on font size
             line_height = int(size * 1.3)

@@ -1,3 +1,3 @@
-from settings.settings import Settings, get_settings # noqa
+from settings.settings import BASE_DIR, FONTS_DIR, Settings, get_settings  # noqa
 
-__all__ = ["Settings", "get_settings"]
+__all__ = ["BASE_DIR", "FONTS_DIR", "Settings", "get_settings"]

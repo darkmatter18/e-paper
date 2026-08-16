@@ -22,15 +22,13 @@ Coordinate System:
     is at (CX=100, CY=120), and the digital display starts at DIGI_X=240.
 """
 import math
-import os
 from datetime import datetime
 
 from PIL import ImageDraw, ImageFont
 
+from fonts import FONT_GEOMINI
 from utils import DateTimeUtil
 from widgets.widget import Widget, WidgetRegion
-
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Clock geometry constants
 CX, CY = 100, 120  # Center point of analog clock face in display coordinates
@@ -43,13 +41,8 @@ HUB_R = 5  # Center hub radius in pixels
 DIGI_X = 240  # Left edge X-coordinate of digital time text area
 
 # Fonts for digital time display
-FONT_DIGI = ImageFont.truetype(
-    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 52
-)  # Large font for hours and minutes
-
-FONT_DIGI_SM = ImageFont.truetype(
-    os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 36
-)  # Smaller font for AM/PM indicator
+FONT_DIGI = ImageFont.truetype(str(FONT_GEOMINI), 52)  # Hours and minutes
+FONT_DIGI_SM = ImageFont.truetype(str(FONT_GEOMINI), 36)  # AM/PM indicator
 
 
 class ClockWidget(Widget):
