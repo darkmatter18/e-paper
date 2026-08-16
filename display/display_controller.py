@@ -344,10 +344,35 @@ class Display:
                     sleep_time = 60 + sleep_time  # Move to next minute
 
                 logger.info(f"Sleeping for {sleep_time:.2f}s until next minute")
-                time.sleep(sleep_time)
 
+                # Sleep in 1-second chunks to check for shutdown commands
+                sleep_remaining = sleep_time
+                while sleep_remaining > 0:
+                    chunk = min(1.0, sleep_remaining)
+                    time.sleep(chunk)
+                    sleep_remaining -= chunk
+
+                    # Check for shutdown command during sleep
+                    if command_queue:
+                        try:
+                            command = command_queue.get_nowait()
+                            if command['type'] == 'shutdown':
+                                logger.info("Received shutdown command during sleep")
+                                # Break out of both loops
+                                raise KeyboardInterrupt
+                            elif command['type'] == 'switch_screen':
+                                # Put command back for next iteration
+                                command_queue.put(command)
+                                break
+                        except queue.Empty:
+                            pass
+
+        except KeyboardInterrupt:
+            logger.info("Engine received shutdown signal")
+            self.cleanup()
         except OSError as e:
             logger.error(f"Hardware error: {e}")
+            self.cleanup()
 
 
     def cleanup(self) -> None:

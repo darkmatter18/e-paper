@@ -35,20 +35,13 @@ def run_display(screen_name: str, command_queue: Queue):
     screen = get_screen(screen_name)
 
     # Start engine with command queue
+    # Note: engine.run() handles cleanup internally on shutdown/error
     engine = Display(screen=screen)
     try:
-
         engine.run(command_queue=command_queue)
-
     except KeyboardInterrupt:
         logger.info("Engine process received keyboard interrupt")
     except Exception:
         logger.exception("Engine process encountered fatal error")
     finally:
-        # Cleanup on exit
-        try:
-            engine.cleanup()
-        except Exception as e:  # noqa: BLE001
-            logger.error(f"Error during cleanup: {e}")
-
         logger.info("Engine process exiting")
