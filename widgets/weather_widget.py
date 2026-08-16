@@ -1,4 +1,35 @@
-"""Weather widget - displays current weather and 5-day forecast."""
+"""Weather widget - displays current weather and 5-day forecast.
+
+This module implements a weather information widget showing current conditions
+and a 5-day forecast visualization. Designed for the top-right area (400x240)
+of the 800x480 e-paper display.
+
+Features:
+    - Current weather: Temperature (red), description, rain %, weather icon
+    - 5-day forecast: Bar chart showing temp range with icons and details
+    - Data fetched from OpenWeatherMap API via internal service
+    - Weather Icons font for consistent meteorological symbols
+
+Layout:
+    - Top section (y=0-55): Current weather in single-line layout
+    - Separator line (y=55): Horizontal divider
+    - Forecast section (y=95-240): Five vertical bars with annotations
+
+Configuration:
+    Requires environment variables in .env:
+    - OPENWEATHER_API_KEY: API key for OpenWeatherMap service
+    - LATITUDE: Location latitude (default: 23.426022)
+    - LONGITUDE: Location longitude (default: 87.550644)
+
+Weather Icons Font:
+    Uses Weather Icons webfont (weathericons-regular-webfont.ttf) with Unicode
+    private use area characters. The WEATHER_ICON_MAP translates OpenWeatherMap
+    icon codes (e.g., "01d" for clear day) to font characters.
+
+Color Usage:
+    - Black: All text except temperature, icons, bars, decorations
+    - Red: Current temperature, max temperature labels (emphasis)
+"""
 import os
 
 from PIL import ImageDraw, ImageFont
@@ -9,56 +40,114 @@ from widgets.widget import Widget, WidgetRegion
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Fonts
+# Weather display fonts (using Righteous for clean, bold sans-serif appearance)
 FONT_WEATHER_TEMP = ImageFont.truetype(
     os.path.join(BASE_DIR, "fonts", "Righteous-Regular.ttf"), 28
-)
+)  # Current temperature (large, emphasized)
+
 FONT_WEATHER_DAY = ImageFont.truetype(
     os.path.join(BASE_DIR, "fonts", "Righteous-Regular.ttf"), 18
-)
+)  # Weather description text
+
 FONT_WEATHER_SMALL = ImageFont.truetype(
     os.path.join(BASE_DIR, "fonts", "Righteous-Regular.ttf"), 14
-)
+)  # Forecast details (temps, percentages, day labels)
+
 FONT_WEATHER_ICON = ImageFont.truetype(
     os.path.join(BASE_DIR, "fonts", "weathericons-regular-webfont.ttf"), 24
-)
+)  # Weather Icons webfont for meteorological symbols
 
 # OpenWeatherMap icon code to Weather Icons font character mapping
+# Maps OWM 3-character codes (condition + day/night) to Unicode private use characters
 WEATHER_ICON_MAP = {
-    "01d": "", "01n": "", "02d": "", "02n": "",
-    "03d": "", "03n": "", "04d": "", "04n": "",
-    "09d": "", "09n": "", "10d": "", "10n": "",
-    "11d": "", "11n": "", "13d": "", "13n": "",
-    "50d": "", "50n": "",
+    "01d": "", "01n": "",  # Clear sky (sun/moon)
+    "02d": "", "02n": "",  # Few clouds (partly cloudy)
+    "03d": "", "03n": "",  # Scattered clouds
+    "04d": "", "04n": "",  # Broken clouds
+    "09d": "", "09n": "",  # Shower rain
+    "10d": "", "10n": "",  # Rain
+    "11d": "", "11n": "",  # Thunderstorm
+    "13d": "", "13n": "",  # Snow
+    "50d": "", "50n": "",  # Mist/fog
 }
 
 
 class WeatherWidget(Widget):
-    """Displays weather in top-right area (400x240)."""
+    """Displays weather in top-right area (400x240).
+
+    Shows current weather conditions and a 5-day forecast with visual bar chart.
+    Weather data is fetched on-demand from OpenWeatherMap API during each full refresh.
+
+    Layout Strategy:
+        - Current weather: Single-line horizontal layout with all elements centered
+        - Forecast: Five evenly-spaced vertical bars with annotations above/below
+        - Temperature bars scaled to relative temperature range for visual comparison
+
+    Data Flow:
+        Widget owns a WeatherService instance and fetches data internally during
+        draw(). This keeps the widget self-contained and allows it to handle errors
+        and caching transparently.
+
+    Attributes:
+        region: WidgetRegion(x=400, y=0, width=400, height=240) - top-right area
+        weather_service: OpenWeatherMapService instance for fetching weather data
+        lat: Location latitude from LATITUDE env var (default: 23.426022)
+        lon: Location longitude from LONGITUDE env var (default: 87.550644)
+    """
 
     def __init__(self):
         """Initialize weather widget with service and location.
 
-        Args:
-            weather_service: Weather service instance
-            lat: Latitude
-            lon: Longitude
+        Reads configuration from environment variables:
+        - OPENWEATHER_API_KEY: Required for API access
+        - LATITUDE: Location latitude (defaults to 23.426022)
+        - LONGITUDE: Location longitude (defaults to 87.550644)
+
+        Raises:
+            ValueError: If environment variables contain invalid numeric values.
+            KeyError: If OPENWEATHER_API_KEY is not set (handled by service layer).
         """
         super().__init__(WidgetRegion(x=400, y=0, width=400, height=240))
         api_key = os.getenv("OPENWEATHER_API_KEY", "")
         self.weather_service: WeatherService = OpenWeatherMapService(api_key)
-        # Weather location
 
+        # Weather location from environment (defaults to coordinates in West Bengal, India)
         self.lat = float(os.getenv("LATITUDE", "23.426022"))
         self.lon = float(os.getenv("LONGITUDE", "87.550644"))
 
     def draw(self, black_draw: ImageDraw.ImageDraw, red_draw: ImageDraw.ImageDraw | None = None, **kwargs):
-        """Draw weather information.
+        """Draw weather information with current conditions and forecast.
+
+        Fetches weather data internally and renders:
+        1. Current weather line: Temp (red) + description + rain % + icon
+        2. Horizontal separator
+        3. 5-day forecast bars with icons, temps, rain %, and day labels
 
         Args:
-            black_draw: PIL ImageDraw for black channel
-            red_draw: Optional PIL ImageDraw for red channel
-            **kwargs: Unused (weather data is fetched internally)
+            black_draw: PIL ImageDraw context for black channel. Used for all text
+                except temperatures, plus icons, bars, and decorations.
+            red_draw: Optional PIL ImageDraw context for red channel. When provided,
+                current temperature and forecast max temps are drawn in red.
+            **kwargs: Unused. Weather data is fetched via self.weather_service.
+
+        Layout Details:
+            Current weather (y=25): All elements centered as a single line
+            - Temperature (28pt, red/black)
+            - Description (18pt, title case)
+            - Rain percentage (14pt, if > 0)
+            - Weather icon (24pt Weather Icons font)
+
+            Forecast (y=95-240): Five bars with 24px width, evenly spaced
+            - Icon above bar
+            - Max temp above bar (red/black, 14pt)
+            - Temperature bar (scaled to range)
+            - Min temp below bar (14pt)
+            - Rain percentage below min temp (14pt, if > 0)
+            - Day label at bottom (14pt, 3-letter abbreviation)
+
+        Note:
+            Forecast bar heights are scaled relative to the temperature range across
+            all 5 days, providing visual comparison of relative temperature swings.
         """
         # Fetch weather data using internal service
         weather = self.weather_service.get_weather(self.lat, self.lon)
@@ -133,7 +222,47 @@ class WeatherWidget(Widget):
 
     def _draw_forecast(self, black_draw: ImageDraw.ImageDraw, red_draw: ImageDraw.ImageDraw | None,
                       forecast: list, qx: int, qy: int, qw: int):
-        """Draw 5-day forecast with bars and icons."""
+        """Draw 5-day forecast with temperature bars and annotations.
+
+        Renders five vertical bars representing temperature ranges, with comprehensive
+        annotations: weather icon, max/min temps, rain probability, and day labels.
+        Bar heights are scaled relative to the temperature range for visual comparison.
+
+        Args:
+            black_draw: PIL ImageDraw context for black channel.
+            red_draw: Optional PIL ImageDraw context for red channel. When provided,
+                max temperature labels are drawn in red.
+            forecast: List of ForecastDay objects (length 5). Each contains:
+                - date: YYYY-MM-DD format
+                - temp_min, temp_max: Temperature range in degrees
+                - rain_probability: Integer percentage (0-100)
+                - icon: OpenWeatherMap icon code (e.g., "01d")
+            qx: Region X offset (typically 400).
+            qy: Region Y offset (typically 0).
+            qw: Region width (typically 400).
+
+        Layout Per Bar:
+            - Icon: y=bar_y-30 (weather symbol, 24pt)
+            - Max temp: y=bar_y-16 (red/black, 14pt)
+            - Bar: y=bar_y to bar_y+bar_h (scaled height, 2px outline)
+            - Min temp: y=bar_y+bar_h_max+2 (fixed position, 14pt)
+            - Rain %: y=min_y+16 (if > 0, 14pt)
+            - Day: y=min_y+32 or +16 (3-letter abbreviation, 14pt)
+
+        Spacing Algorithm:
+            Available width is divided into (n+1) gaps plus n bars:
+            - Margin: 30px on each side
+            - Bar width: 24px (fixed)
+            - Gaps: (available_width - total_bar_width) / (n + 1)
+            - This ensures even spacing with equal margins on both sides
+
+        Temperature Scaling:
+            Bar heights are proportional to (temp_max - temp_min) / total_range,
+            capped at bar_h_max=50px. Minimum bar height is 10px for visibility.
+
+        Note:
+            All elements are horizontally centered on their bar's center_x coordinate.
+        """
         from datetime import datetime
 
         bar_w = 24  # Fixed narrow width
@@ -201,7 +330,20 @@ class WeatherWidget(Widget):
             black_draw.text((center_x - tw // 2, day_y), day_label, font=FONT_WEATHER_SMALL, fill=0)
 
     def draw_decorations(self, black_draw: ImageDraw.ImageDraw):
-        """Draw black decorative elements."""
+        """Draw black decorative elements around weather widget.
+
+        Adds minimal corner brackets at top-left and top-right to frame the
+        weather section without overwhelming the information-dense content.
+
+        Args:
+            black_draw: PIL ImageDraw context for black channel.
+
+        Note:
+            Weather widget uses minimal decoration compared to other widgets since
+            it contains more functional data (current + 5-day forecast). Corner
+            brackets provide framing without cluttering the forecast visualization.
+            Called only during full refresh.
+        """
         qx, qy, qw = self.region.x, self.region.y, self.region.width
 
         # Corner brackets for weather section
@@ -213,7 +355,18 @@ class WeatherWidget(Widget):
             black_draw.line([cx, cy, cx, cy + sy * 20], fill=0, width=2)
 
     def draw_red_decorations(self, red_draw: ImageDraw.ImageDraw):
-        """Draw red decorative elements."""
+        """Draw red decorative accent elements.
+
+        Adds subtle red dots at top corners to balance the widget's appearance
+        and coordinate with red temperature text.
+
+        Args:
+            red_draw: PIL ImageDraw context for red channel.
+
+        Note:
+            Minimal red decoration to avoid competing with functional red elements
+            (current temp, max temps in forecast). Called only during full refresh.
+        """
         qx, qy = self.region.x, self.region.y
 
         # Red corner dots

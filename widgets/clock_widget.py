@@ -1,4 +1,26 @@
-"""Clock widget - displays analog clock with digital time."""
+"""Clock widget - displays analog clock with digital time.
+
+This module implements a dual-display clock widget combining an analog clock face
+with a stacked digital time display (HH/MM/AM-PM). Designed for the upper-left
+quadrant (400x240) of the 800x480 e-paper display.
+
+Features:
+    - Analog clock with 12 tick marks and smooth hour hand movement
+    - Digital time stacked vertically with hour shown in red
+    - Supports partial refresh for minute hand updates (black-only)
+    - Decorative elements: dot ring, corner brackets, sun/moon indicator
+    - Red accents: hour hand, quarter-hour dots, corner stars
+
+Hardware Optimization:
+    The clock supports partial refresh because the minute hand can be redrawn in
+    black without needing the red channel. The hour hand is drawn in red during
+    full refresh, but switches to black during partial refresh (it moves slowly
+    enough that color changes are imperceptible between full refreshes).
+
+Coordinate System:
+    All drawing is done in absolute display coordinates. The analog clock center
+    is at (CX=100, CY=120), and the digital display starts at DIGI_X=240.
+"""
 import math
 import os
 from datetime import datetime
@@ -10,43 +32,81 @@ from widgets.widget import Widget, WidgetRegion
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Clock geometry
-CX, CY = 100, 120  # center of the analog clock
-RADIUS = 90  # outer circle radius
-HOUR_LEN = 50  # hour hand length
-MIN_LEN = 78  # minute hand length
-HUB_R = 5  # center hub radius
+# Clock geometry constants
+CX, CY = 100, 120  # Center point of analog clock face in display coordinates
+RADIUS = 90  # Outer circle radius in pixels
+HOUR_LEN = 50  # Hour hand length from center in pixels
+MIN_LEN = 78  # Minute hand length from center in pixels
+HUB_R = 5  # Center hub radius in pixels
 
-# Digital clock position
-DIGI_X = 240  # left edge of digital text area
+# Digital clock positioning
+DIGI_X = 240  # Left edge X-coordinate of digital time text area
 
-# Fonts
+# Fonts for digital time display
 FONT_DIGI = ImageFont.truetype(
     os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 52
-)
+)  # Large font for hours and minutes
+
 FONT_DIGI_SM = ImageFont.truetype(
     os.path.join(BASE_DIR, "fonts", "Geomini-VariableFont_wght.ttf"), 36
-)
+)  # Smaller font for AM/PM indicator
 
 
 class ClockWidget(Widget):
-    """Displays analog clock with digital time in upper-left quadrant (400x240)."""
+    """Displays analog clock with digital time in upper-left quadrant (400x240).
+
+    Combines a traditional analog clock face with a modern stacked digital display.
+    The analog clock shows smooth hour hand movement (advances with minutes), while
+    the digital display shows HH/MM/AM-PM in a vertical stack.
+
+    Layout:
+        - Left side: Analog clock centered at (100, 120)
+        - Right side: Digital time starting at x=240
+
+    Refresh Strategy:
+        - Full refresh: Hour hand drawn in red, all decorations visible
+        - Partial refresh: Hour hand drawn in black (changes slowly), minute hand updated
+
+    Color Usage:
+        - Black: Clock face, tick marks, minute hand, MM/AM-PM text
+        - Red: Hour hand (full refresh only), HH text, decorative accents
+
+    Attributes:
+        region: WidgetRegion(x=0, y=0, width=400, height=240) - upper-left quadrant
+    """
 
     def __init__(self):
+        """Initialize clock widget with upper-left quadrant region."""
         super().__init__(WidgetRegion(x=0, y=0, width=400, height=240))
 
     @property
     def supports_partial_refresh(self) -> bool:
-        """Clock supports partial refresh for minute hand updates."""
+        """Clock supports partial refresh for minute hand updates.
+
+        Returns:
+            True, because minute hand position changes frequently and can be
+            rendered entirely in black. Hour hand moves slowly enough that
+            switching from red to black during partial refresh is acceptable.
+        """
         return True
 
     def draw(self, black_draw: ImageDraw.ImageDraw, red_draw: ImageDraw.ImageDraw | None = None, **kwargs):
-        """Draw clock face and hands.
+        """Draw clock face, hands, and digital time display.
+
+        Renders the complete clock widget including static clock face, moving hands,
+        and digital time. Hour hand color adapts based on refresh type: red during
+        full refresh, black during partial refresh.
 
         Args:
-            black_draw: PIL ImageDraw for black channel
-            red_draw: Optional PIL ImageDraw for red channel
-            **kwargs: Must include 'now' (datetime object)
+            black_draw: PIL ImageDraw context for black channel. Used for clock face,
+                minute hand, and most digital time elements.
+            red_draw: PIL ImageDraw context for red channel, or None during partial
+                refresh. When provided, hour hand and hour digits are drawn in red.
+            **kwargs: Unused. Current time is obtained from DateTimeUtil.now().
+
+        Note:
+            This method fetches current time internally rather than using kwargs,
+            ensuring real-time accuracy regardless of when the refresh was triggered.
         """
         now = DateTimeUtil.now()
 
@@ -67,7 +127,19 @@ class ClockWidget(Widget):
         self._draw_digital(black_draw, now, red_draw=red_draw)
 
     def _draw_clock_face(self, draw: ImageDraw.ImageDraw):
-        """Draw clock face: outer circle, tick marks, center hub."""
+        """Draw static analog clock face elements.
+
+        Renders the circular clock outline, 12 tick marks (with longer marks at
+        quarters: 12, 3, 6, 9), and center hub. This is the static background
+        behind the moving clock hands.
+
+        Args:
+            draw: PIL ImageDraw context for black channel.
+
+        Note:
+            Tick marks use math.sin/cos with angle calculation: 2π * (position/12)
+            where 0° is top (12 o'clock) and rotation is clockwise.
+        """
         # Outer circle
         draw.ellipse(
             [CX - RADIUS, CY - RADIUS, CX + RADIUS, CY + RADIUS],
@@ -90,7 +162,22 @@ class ClockWidget(Widget):
         draw.ellipse([CX - HUB_R, CY - HUB_R, CX + HUB_R, CY + HUB_R], fill=0)
 
     def _draw_hour_hand(self, draw: ImageDraw.ImageDraw, hour: int, minute: int, fill: int):
-        """Draw hour hand (advances smoothly with minutes)."""
+        """Draw hour hand with smooth minute-based advancement.
+
+        Renders the hour hand as a thick line from center to calculated position.
+        Unlike traditional clocks that jump between hours, this implementation
+        advances smoothly: at 3:30, the hand is halfway between 3 and 4.
+
+        Args:
+            draw: PIL ImageDraw context (black or red channel).
+            hour: Current hour (0-23). Converted to 12-hour internally.
+            minute: Current minute (0-59). Used to calculate fractional hour position.
+            fill: Fill color (0 for black/red, 255 for white). Typically 0.
+
+        Algorithm:
+            Position = (hour % 12 + minute/60) / 12 * 2π
+            This creates smooth 12-hour rotation with minute-precision.
+        """
         value = (hour % 12) + minute / 60.0
         angle = 2 * math.pi * (value / 12)
         x = CX + HOUR_LEN * math.sin(angle)
@@ -98,14 +185,47 @@ class ClockWidget(Widget):
         draw.line([CX, CY, x, y], fill=fill, width=8)
 
     def _draw_minute_hand(self, draw: ImageDraw.ImageDraw, minute: int, fill: int):
-        """Draw minute hand."""
+        """Draw minute hand pointing to current minute.
+
+        Renders the minute hand as a medium-weight line from center to calculated
+        position. This is the primary moving element during partial refresh.
+
+        Args:
+            draw: PIL ImageDraw context (typically black channel).
+            minute: Current minute (0-59). Directly maps to 60 positions around the clock.
+            fill: Fill color (0 for black, 255 for white). Typically 0.
+
+        Note:
+            Updates every minute during partial refresh. Hand length (MIN_LEN=78)
+            is longer than hour hand (HOUR_LEN=50) for traditional clock proportions.
+        """
         angle = 2 * math.pi * (minute / 60)
         x = CX + MIN_LEN * math.sin(angle)
         y = CY - MIN_LEN * math.cos(angle)
         draw.line([CX, CY, x, y], fill=fill, width=5)
 
     def _draw_digital(self, draw: ImageDraw.ImageDraw, now: datetime, red_draw: ImageDraw.ImageDraw | None = None):
-        """Draw digital time (HH / MM / AM|PM stacked vertically)."""
+        """Draw digital time display in stacked HH/MM/AM-PM format.
+
+        Renders three lines of text vertically centered in the right portion of
+        the clock widget. Hour is emphasized in red (when available), creating
+        visual hierarchy and color coordination with the red hour hand.
+
+        Args:
+            draw: PIL ImageDraw context for black channel.
+            now: Current datetime object. Used to extract hour, minute, and AM/PM.
+            red_draw: Optional PIL ImageDraw context for red channel. When provided,
+                the hour line is drawn in red; otherwise drawn in black.
+
+        Layout:
+            Line 1 (top): HH in 12-hour format (01-12) - red or black
+            Line 2 (middle): MM zero-padded (00-59) - always black
+            Line 3 (bottom): AM/PM indicator - always black, smaller font
+
+        Note:
+            All three lines are center-aligned within a 120px wide area starting
+            at DIGI_X=240. Vertical spacing is 65px between baselines.
+        """
         hour_12 = now.hour % 12 or 12
         ampm = "AM" if now.hour < 12 else "PM"
 
@@ -128,7 +248,22 @@ class ClockWidget(Widget):
             y += line_spacing
 
     def draw_decorations(self, black_draw: ImageDraw.ImageDraw):
-        """Draw black decorative elements."""
+        """Draw black decorative elements around clock widget.
+
+        Adds ornamental features that enhance the vintage/decorative aesthetic:
+        - Dot ring around analog clock (60 dots at minute positions, larger at 5-min marks)
+        - Small separator dots between digital time lines
+        - Corner flourishes (L-shaped brackets at all 4 corners)
+        - Ornamental brackets flanking digital time
+        - Sun/moon indicator at top center (sun: 6am-6pm, moon: 6pm-6am)
+
+        Args:
+            black_draw: PIL ImageDraw context for black channel.
+
+        Note:
+            Called only during full refresh. These decorations are static and don't
+            change with time (except sun/moon which updates hourly).
+        """
         # Dot ring around the analog clock
         for i in range(60):
             angle = 2 * math.pi * (i / 60)
@@ -181,7 +316,20 @@ class ClockWidget(Widget):
             black_draw.ellipse([icon_x - 3, icon_y - 8, icon_x + 11, icon_y + 8], fill=255)
 
     def draw_red_decorations(self, red_draw: ImageDraw.ImageDraw):
-        """Draw red decorative elements."""
+        """Draw red decorative accent elements.
+
+        Adds red ornamental touches that complement the red hour hand and hour digits:
+        - Red diamond below analog clock
+        - Red dots at quarter-hour positions (12, 3, 6, 9) on outer dot ring
+        - Small red stars at top corners
+
+        Args:
+            red_draw: PIL ImageDraw context for red channel.
+
+        Note:
+            Called only during full refresh (every 15 minutes). Red elements require
+            full refresh to activate or erase due to e-paper hardware limitations.
+        """
         # Small red diamond below the analog clock
         dx, dy = CX, CY + RADIUS + 14
         red_draw.polygon([dx, dy - 5, dx + 5, dy, dx, dy + 5, dx - 5, dy], fill=0)
@@ -199,7 +347,23 @@ class ClockWidget(Widget):
             self._draw_star(red_draw, sx, sy, 6, 3)
 
     def _draw_star(self, draw: ImageDraw.ImageDraw, cx: float, cy: float, outer_r: float, inner_r: float, points: int = 5):
-        """Draw a star shape."""
+        """Draw a star polygon shape.
+
+        Creates a star by alternating between outer and inner radii around a center point.
+        Used for decorative accents in corners and other ornamental locations.
+
+        Args:
+            draw: PIL ImageDraw context (black or red channel).
+            cx: X coordinate of star center.
+            cy: Y coordinate of star center.
+            outer_r: Radius to outer points (tips of star).
+            inner_r: Radius to inner points (valleys between tips).
+            points: Number of star points. Defaults to 5 (classic five-pointed star).
+
+        Algorithm:
+            Generates 2*points vertices by alternating between outer_r and inner_r
+            at evenly spaced angles, starting from top (-π/2) and rotating clockwise.
+        """
         coords = []
         for i in range(points * 2):
             angle = math.pi * (i / points) - math.pi / 2

@@ -1,4 +1,39 @@
-"""Quote widget - displays quote of the day with author."""
+"""Quote widget - displays quote of the day with author.
+
+This module implements an inspirational quote display widget showing daily quotes
+from ZenQuotes API. Designed for the bottom-right area (400x240) of the 800x480
+e-paper display.
+
+Features:
+    - Quote text with adaptive font sizing (32pt down to 20pt based on length)
+    - Decorative opening and closing quotation marks
+    - Author attribution centered at bottom
+    - Automatic text wrapping to fit available width
+    - Elegant typography using Playfair Display (serif font for literary feel)
+
+Typography:
+    - Quote text: Playfair Display Variable (32/28/24/20pt, auto-sized)
+    - Author: Playfair Display Italic Variable (24/22/20/18pt, auto-sized)
+    - Fallback: Geomini Variable if Playfair not available
+
+Font Sizing Strategy:
+    Widget tries progressively smaller font sizes until the wrapped text fits
+    within available height (qh - 100px). This ensures long quotes don't overflow
+    while short quotes get maximum visual impact.
+
+Color Usage:
+    - Black: All text (quote + author), decorative elements
+    - No red elements in quote widget (maintains focus on text)
+
+Layout:
+    - Opening quote mark: Top-left with padding
+    - Quote text: Centered, auto-wrapped, with line_height = size * 1.3
+    - Closing quote mark: Bottom-right of last line
+    - Author: Bottom center with "—" prefix
+
+Data Source:
+    Quotes fetched from ZenQuotes API via ZenQuotesService with daily caching.
+"""
 import logging
 import os
 
@@ -12,20 +47,69 @@ logger = logging.getLogger(__name__)
 
 
 class QuoteWidget(Widget):
-    """Displays quote in bottom-right area (400x240)."""
+    """Displays quote in bottom-right area (400x240).
+
+    Shows daily inspirational quote with author attribution. Quotes are fetched
+    from ZenQuotes API and cached daily by the internal service.
+
+    Design Philosophy:
+        The quote widget provides a moment of reflection and inspiration. Clean
+        typography and generous spacing let the words breathe, while decorative
+        quotation marks add elegance without overwhelming the message.
+
+    Adaptive Typography:
+        Font size automatically scales based on quote length, ensuring both short
+        maxims and longer passages fit gracefully within the available space.
+
+    Attributes:
+        region: WidgetRegion(x=400, y=240, width=400, height=240) - bottom-right area
+        quote_service: ZenQuotesService instance for fetching daily quotes
+    """
 
     def __init__(self):
-        super().__init__(WidgetRegion(x=400, y=240, width=400, height=240))
+        """Initialize quote widget with ZenQuotes service.
 
+        Creates a self-contained widget that handles quote fetching and caching
+        internally via ZenQuotesService.
+        """
+        super().__init__(WidgetRegion(x=400, y=240, width=400, height=240))
         self.quote_service = ZenQuotesService()
 
     def draw(self, black_draw: ImageDraw.ImageDraw, red_draw: ImageDraw.ImageDraw | None = None, **kwargs):
-        """Draw quote text and author.
+        """Draw quote text with author attribution.
+
+        Fetches quote internally and renders with adaptive font sizing, automatic
+        text wrapping, decorative quotation marks, and centered author attribution.
 
         Args:
-            black_draw: PIL ImageDraw for black channel
-            red_draw: Optional PIL ImageDraw for red channel
-            **kwargs: Must include 'quote' (Quote object)
+            black_draw: PIL ImageDraw context for black channel. All quote elements
+                are drawn in black for clarity and readability.
+            red_draw: Optional PIL ImageDraw context for red channel (unused).
+                Quote widget uses black-only to maintain focus on text.
+            **kwargs: Unused. Quote is fetched via self.quote_service.
+
+        Font Sizing:
+            Tries font sizes in order: [32, 28, 24, 20] pt for quote text
+            with corresponding author sizes: [24, 22, 20, 18] pt.
+            Uses first size where wrapped text fits in (qh - 100) px.
+
+        Layout:
+            - Opening """: Top-left at (qx + padding - 8, qy + 20)
+            - Quote lines: Centered horizontally, starting at y=qy+60
+            - Closing """: Bottom-right of last line at (y - line_height/2)
+            - Author: Centered at (qy + qh - 50) with "—" prefix
+
+        Text Wrapping:
+            _wrap_text() splits on word boundaries to fit max_width (qw - 2*padding).
+            Line height is calculated as size * 1.3 for comfortable reading.
+
+        Fallback:
+            If Playfair Display fonts not found, falls back to Geomini Variable
+            and logs a warning. This ensures the widget works even with missing fonts.
+
+        Note:
+            This method fetches quote internally rather than using kwargs, ensuring
+            quote consistency with daily caching handled by the service layer.
         """
         quote = self.quote_service.get_quote_of_the_day()
 
@@ -97,7 +181,32 @@ class QuoteWidget(Widget):
 
     def _wrap_text(self, text: str, font: ImageFont.FreeTypeFont, max_width: int,
                    draw: ImageDraw.ImageDraw) -> list[str]:
-        """Wrap text to fit within max_width."""
+        """Wrap text to fit within max_width using word boundaries.
+
+        Implements greedy line wrapping algorithm: adds words to current line
+        until adding another would exceed max_width, then starts a new line.
+
+        Args:
+            text: The quote text to wrap.
+            font: PIL FreeTypeFont to use for width measurement.
+            max_width: Maximum line width in pixels.
+            draw: PIL ImageDraw context for text measurement (textbbox).
+
+        Returns:
+            List of wrapped text lines, each fitting within max_width.
+
+        Algorithm:
+            1. Split text into words
+            2. For each word:
+               - Try adding to current line
+               - Measure width with textbbox
+               - If fits, add word; if not, start new line
+            3. Append final line if non-empty
+
+        Note:
+            Uses textbbox for accurate width measurement including kerning
+            and font-specific spacing. Empty lines are never added to output.
+        """
         words = text.split()
         lines = []
         current_line = []
@@ -120,7 +229,25 @@ class QuoteWidget(Widget):
         return lines
 
     def draw_decorations(self, black_draw: ImageDraw.ImageDraw):
-        """Draw black decorative elements."""
+        """Draw black decorative elements around quote widget.
+
+        Adds elegant framing elements that complement the literary nature of quotes:
+        - Corner brackets at all four corners (L-shaped, 20px arms)
+        - Dotted border along top edge (3px dots, 20px spacing)
+
+        Args:
+            black_draw: PIL ImageDraw context for black channel.
+
+        Design Rationale:
+            Corner brackets create a "framed" effect like a picture or poster,
+            appropriate for inspirational quotes. Dotted top border adds subtle
+            texture without competing with text. No bottom border decoration to
+            keep focus on author attribution.
+
+        Note:
+            Called only during full refresh. Decorations are static and complement
+            the quote content without overwhelming it.
+        """
         qx, qy, qw, qh = self.region.x, self.region.y, self.region.width, self.region.height
 
         # Corner brackets for quote section
@@ -138,7 +265,23 @@ class QuoteWidget(Widget):
             black_draw.ellipse([x, qy + 8, x + 3, qy + 11], fill=0)
 
     def draw_red_decorations(self, red_draw: ImageDraw.ImageDraw):
-        """Draw red decorative elements."""
+        """Draw red decorative accent elements.
+
+        Adds minimal red diamond accents at top corners to coordinate with the
+        overall display's red accent strategy without distracting from quote text.
+
+        Args:
+            red_draw: PIL ImageDraw context for red channel.
+
+        Design Rationale:
+            Quote widget uses minimal red decoration to maintain focus on text
+            content. Small diamonds provide visual connection to other widgets'
+            red accents while remaining subtle and unobtrusive.
+
+        Note:
+            Called only during full refresh. Red elements require full refresh
+            to activate or erase due to e-paper hardware limitations.
+        """
         qx, qy = self.region.x, self.region.y
 
         # Small red diamonds at corners
