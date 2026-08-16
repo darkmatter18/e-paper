@@ -35,6 +35,7 @@ class DisplaySettings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",  # Ignore environment variables that don't have DISPLAY_ prefix
     )
 
 
@@ -63,6 +64,7 @@ class WeatherSettings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",  # Ignore environment variables that don't have WEATHER_ prefix
     )
 
 
@@ -91,6 +93,7 @@ class TimezoneSettings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",  # Ignore environment variables that don't have TIMEZONE_ prefix
     )
 
 
