@@ -221,6 +221,7 @@ All modules, classes, methods, and functions are documented with comprehensive G
   - Module-level docs: Architecture overview, hardware details
   - Class docs: PartialStateManager with state tracking details
   - Function docs: full_refresh(), partial_refresh(), clock() with complete workflows
+  - Side Effects sections for hardware interaction functions
 
 **Widget Modules:**
 - `widgets/widget.py`: Base Widget class and WidgetRegion dataclass
@@ -228,31 +229,44 @@ All modules, classes, methods, and functions are documented with comprehensive G
   - Hardware constraints (e-paper dual-channel, polarity)
 - `widgets/clock_widget.py`: Analog + digital clock with partial refresh
   - Smooth hour hand algorithm, coordinate system details
+  - Constants documented (CX, CY, RADIUS, HOUR_LEN, MIN_LEN, fonts)
 - `widgets/date_widget.py`: Day + date with scalloped borders
   - Typography strategy, decorative elements
+  - Font constants and region layout
 - `widgets/weather_widget.py`: Current weather + 5-day forecast
   - OpenWeatherMap integration, Weather Icons font mapping
+  - API configuration via environment variables
 - `widgets/quote_widget.py`: Quote with adaptive font sizing
   - Dynamic sizing algorithm, Playfair Display typography
+  - Text wrapping strategy
 
 **Utility Modules:**
 - `utils/datetime_util.py`: Timezone-aware datetime (IST)
-  - Static methods, timezone conversion examples
+  - Static methods for timezone conversion
+  - IST constant (UTC+5:30)
 
 **Service Modules:**
 - `services/quote/`: Abstract service + ZenQuotes implementation
-  - Quote dataclass, caching strategy (date-based)
+  - Quote dataclass with text and author fields
+  - Abstract QuoteService interface
+  - ZenQuotesService with date-based caching
   - API integration details, fallback mechanism
 - `services/weather/`: Abstract service + OpenWeatherMap implementation
   - CurrentWeather, ForecastDay, WeatherData dataclasses
-  - API integration, forecast aggregation, caching recommendations
+  - Abstract WeatherService interface
+  - OpenWeatherMapService with API integration
+  - Forecast aggregation from 3-hour intervals to daily summaries
+  - Caching recommendations (10-30 minutes)
 
 **Documentation Standards:**
 - Google-style docstrings throughout
-- Type hints on all functions/methods
-- Args, Returns, Raises, Examples sections where applicable
-- Hardware constraints and implementation notes documented
-- Caching strategies and API integration details explained
+- Type hints on all functions/methods/parameters
+- Args, Returns, Raises, Note sections where applicable
+- Side Effects documented for hardware interaction
+- Hardware constraints documented inline (e-paper polarity, partial refresh limitations)
+- Caching strategies explained in service implementations
+- API integration details (endpoints, authentication, rate limits)
+- **No usage examples or code snippets** - focused on API contracts only
 
 ## Testing
 
