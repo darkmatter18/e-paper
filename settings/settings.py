@@ -32,10 +32,8 @@ class DisplaySettings(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_prefix="DISPLAY_",
-        env_file=".env",
-        env_file_encoding="utf-8",
         case_sensitive=False,
-        extra="ignore",  # Ignore environment variables that don't have DISPLAY_ prefix
+        extra="ignore",
     )
 
 
@@ -61,10 +59,8 @@ class WeatherSettings(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_prefix="WEATHER_",
-        env_file=".env",
-        env_file_encoding="utf-8",
         case_sensitive=False,
-        extra="ignore",  # Ignore environment variables that don't have WEATHER_ prefix
+        extra="ignore",
     )
 
 
@@ -90,10 +86,8 @@ class TimezoneSettings(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_prefix="TIMEZONE_",
-        env_file=".env",
-        env_file_encoding="utf-8",
         case_sensitive=False,
-        extra="ignore",  # Ignore environment variables that don't have TIMEZONE_ prefix
+        extra="ignore",
     )
 
 
