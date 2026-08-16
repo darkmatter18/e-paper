@@ -266,6 +266,11 @@ class Display:
             - Runs indefinitely (blocking call)
             - Logs refresh cycles and errors
         """
+        logger.info("Starting display engine main loop")
+        logger.info(f"Screen: '{self.screen.name}' with {len(self.screen.widgets)} widgets")
+        logger.info(f"Full refresh interval: {self.full_refresh_interval} minutes")
+        logger.info(f"Display size: {self.display_width}x{self.display_height}")
+
         last_minute = None
 
         try:
@@ -307,17 +312,23 @@ class Display:
 
         try:
             command = command_queue.get_nowait()
-            logger.info(f"Received command: {command['type']}")
+            command_type = command['type']
+            logger.info(f"Command received: {command_type}")
 
-            if command['type'] == 'shutdown':
-                logger.info("Shutting down engine...")
+            if command_type == 'shutdown':
+                logger.info("Processing shutdown command - engine will stop")
                 return True
 
-            elif command['type'] == 'switch_screen':
+            elif command_type == 'switch_screen':
                 from screens import get_screen
                 screen_name = command['screen_name']
+                logger.info(f"Processing switch_screen command: '{self.screen.name}' -> '{screen_name}'")
                 new_screen = get_screen(screen_name)
                 self.switch_screen(new_screen)
+                logger.info("Screen switch completed successfully")
+
+            else:
+                logger.warning(f"Unknown command type received: {command_type}")
 
         except queue.Empty:
             pass
@@ -331,6 +342,7 @@ class Display:
             now: Current datetime
         """
         minute = now.minute
+        time_str = now.strftime("%H:%M")
 
         # Determine if full refresh is needed
         need_full = (
@@ -340,8 +352,11 @@ class Display:
         )
 
         if need_full:
+            reason = "first run" if self.last_full is None else f"interval ({minute}:00)"
+            logger.info(f"Refresh decision [{time_str}]: Full refresh ({reason})")
             self._do_full_refresh(now)
         else:
+            logger.info(f"Refresh decision [{time_str}]: Partial refresh check")
             self._do_partial_refresh(now)
 
     def _do_full_refresh(self, now) -> None:
