@@ -109,7 +109,7 @@ class Engine:
             - Updates state_manager with regions for all partial-refresh widgets
             - Display briefly flashes black/white/red during update
         """
-        logger.info("Full refresh")
+        logger.info("Starting full refresh (all widgets with red channel)")
         self.epd.init()
 
         # Create white canvases for both channels (255 = white in mode '1')
@@ -132,6 +132,8 @@ class Engine:
             black, self.screen.get_all_widgets(), self.extract_region
         )
 
+        logger.info("Full refresh completed successfully")
+
     def partial_refresh(self) -> None:
         """Perform partial refresh for widgets that support it (black channel only).
 
@@ -145,10 +147,15 @@ class Engine:
             - Display updates without flashing (only changed pixels)
             - Each widget refresh takes ~100ms for controller processing
         """
+        logger.info(f"Starting partial refresh ({self.screen} widgets)")
+
         from lib.waveshare_epd import epdconfig
 
+        partial_widgets = self.screen.get_partial_refresh_widgets()
+
+        refreshed_count = 0
         # Iterate through all widgets that support partial refresh
-        for widget in self.screen.get_partial_refresh_widgets():
+        for widget in partial_widgets:
             # Retrieve previous region state for comparison
             old_region = self.state_manager.get_old_region(widget)
             if old_region is None:
@@ -200,6 +207,9 @@ class Engine:
 
             # Store new region for next partial refresh cycle
             self.state_manager.update_state(widget, new_region)
+            refreshed_count += 1
+
+        logger.info(f"Partial refresh completed ({refreshed_count}/{len(partial_widgets)} widgets updated)")
 
     def run(self) -> None:
         """Main rendering loop - manages display update cycles.
@@ -264,7 +274,7 @@ class Engine:
                 if sleep_time < 0.1:
                     sleep_time = 60 + sleep_time  # Move to next minute
 
-                logger.debug(f"Sleeping for {sleep_time:.2f}s until next minute")
+                logger.info(f"Sleeping for {sleep_time:.2f}s until next minute")
                 time.sleep(sleep_time)
 
         except OSError as e:
