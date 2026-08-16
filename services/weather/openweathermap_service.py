@@ -150,6 +150,7 @@ class OpenWeatherMapService(WeatherService):
             The units parameter is passed to OpenWeatherMap API, not used for
             local conversion. API returns data in the requested units.
         """
+        logger.info(f"Initializing API Key={api_key}, Units={units}")
         self.api_key = api_key
         self.http_client = http_client or HttpClient()
         self.units = units
