@@ -298,9 +298,15 @@ def clock() -> None:
                     last_full = now
                     epd.sleep()
 
-            # Calculate sleep time to wake at the start of the next minute
-            seconds_elapsed = now.second + (now.microsecond / 1_000_000)
+            # Get current time after rendering completes to calculate accurate sleep time
+            now_after_render = DateTimeUtil.now()
+            seconds_elapsed = now_after_render.second + (now_after_render.microsecond / 1_000_000)
             sleep_time = 60 - seconds_elapsed
+
+            # Ensure we always sleep at least a little to avoid tight loop
+            if sleep_time < 0.1:
+                sleep_time = 60 + sleep_time  # Move to next minute
+
             logger.debug(f"Sleeping for {sleep_time:.2f} seconds until next minute")
             time.sleep(sleep_time)
 
