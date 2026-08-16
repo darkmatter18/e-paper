@@ -94,9 +94,9 @@ class QuoteWidget(Widget):
             Uses first size where wrapped text fits in (qh - 100) px.
 
         Layout:
-            - Opening """: Top-left at (qx + padding - 8, qy + 20)
+            - Opening "”": Top-left at (qx + padding - 8, qy + 20)
             - Quote lines: Centered horizontally, starting at y=qy+60
-            - Closing """: Bottom-right of last line at (y - line_height/2)
+            - Closing "”": Bottom-right of last line at (y - line_height/2)
             - Author: Centered at (qy + qh - 50) with "—" prefix
 
         Text Wrapping:
