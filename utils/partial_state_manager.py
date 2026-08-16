@@ -19,13 +19,14 @@ class PartialStateManager:
     comparison and clean updates without ghosting.
 
     Attributes:
-        _states (dict): Maps Widget instances to their previous PIL Image regions.
+        _states (dict): Maps widget class names (str) to their previous PIL Image regions.
                        Only widgets with supports_partial_refresh=True are tracked.
+                       Keys are widget class names (e.g., "ClockWidget", "DateWidget").
     """
 
     def __init__(self):
         """Initialize state manager with empty state dictionary."""
-        self._states: dict[Widget, Image.Image] = {}
+        self._states: dict[str, Image.Image] = {}
 
     def get_old_region(self, widget: Widget) -> Image.Image | None:
         """Get previous region image for a widget.
@@ -37,20 +38,22 @@ class PartialStateManager:
             PIL Image of the widget's previous region, or None if no state exists.
             Returns None on first partial refresh after full refresh.
         """
-        return self._states.get(widget)
+        widget_key = widget.__class__.__name__
+        return self._states.get(widget_key)
 
     def update_state(self, widget: Widget, new_region: Image.Image) -> None:
         """Update stored state for a widget.
 
         Stores a copy of the region image to preserve state even if the original
-        image is modified.
+        image is modified. Uses widget class name as key.
 
         Args:
             widget: Widget instance to update state for.
             new_region: New PIL Image region to store. Image is copied to prevent
                        external modifications from affecting stored state.
         """
-        self._states[widget] = new_region.copy()
+        widget_key = widget.__class__.__name__
+        self._states[widget_key] = new_region.copy()
 
     def update_from_full_frame(
         self,
