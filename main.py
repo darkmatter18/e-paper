@@ -5,12 +5,16 @@ import logging
 from dotenv import load_dotenv
 
 from engine import Engine
+from settings import get_settings
 from utils import Screen
 from utils.log import configure_logging
 from widgets import ClockWidget, DateWidget, QuoteWidget, WeatherWidget
 
-# Load environment variables
+# Load environment variables first
 load_dotenv()
+
+# Get settings
+settings = get_settings()
 
 # Configure logging
 configure_logging()
@@ -32,10 +36,21 @@ def main():
     )
 
     logger.info(f"Starting e-paper clock with {len(clock_screen)} widgets")
+    logger.info(f"Display: {settings.display.WIDTH}x{settings.display.HEIGHT} (Waveshare 7.5\" B/V2)")
+    logger.info(f"Full refresh interval: {settings.display.full_refresh_interval} minutes")
+    logger.info(f"Timezone: {settings.timezone.name} (UTC+{settings.timezone.utc_offset_hours}:{settings.timezone.utc_offset_minutes:02d})")
+
 
     # Create and run rendering engine
-    engine = Engine(screen=clock_screen, full_refresh_interval=15)
-    engine.run()
+    engine = Engine(screen=clock_screen)
+
+    try: 
+        engine.run()
+    except KeyboardInterrupt:
+        logger.info("Received keyboard interrupt, shutting down...")
+        engine.cleanup()
+    except Exception:
+        logger.exception("Unexpected error occurred")
 
 
 if __name__ == "__main__":

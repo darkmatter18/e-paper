@@ -6,15 +6,16 @@ state management, and the main display loop.
 """
 
 import logging
-import sys
 import time
 
 from PIL import Image, ImageDraw
 
 from lib.waveshare_epd import epd7in5b_V2
+from settings import get_settings
 from utils import DateTimeUtil, PartialStateManager, Screen
 
 logger = logging.getLogger(__name__)
+settings = get_settings()
 
 
 class Engine:
@@ -36,18 +37,20 @@ class Engine:
         display_height (int): Display height in pixels (480).
     """
 
-    def __init__(self, screen: Screen, full_refresh_interval: int = 15):
+    def __init__(self, screen: Screen):
         """Initialize rendering engine.
 
         Args:
             screen: Screen instance with widgets to render.
-            full_refresh_interval: Minutes between full refreshes (default: 15).
-                                  Full refresh activates/erases red pigment.
+
+        Note:
+            Display settings (width, height, refresh interval) are loaded from
+            application settings via get_settings().
         """
         self.screen = screen
-        self.full_refresh_interval = full_refresh_interval
-        self.display_width = 800
-        self.display_height = 480
+        self.full_refresh_interval = settings.display.full_refresh_interval
+        self.display_width = settings.display.WIDTH
+        self.display_height = settings.display.HEIGHT
 
         # Initialize hardware
         self.epd = epd7in5b_V2.EPD()
@@ -267,10 +270,6 @@ class Engine:
         except OSError as e:
             logger.error(f"Hardware error: {e}")
 
-        except KeyboardInterrupt:
-            logger.info("Exiting...")
-            epd7in5b_V2.epdconfig.module_exit()
-            sys.exit()
 
     def cleanup(self) -> None:
         """Clean up display hardware resources.
