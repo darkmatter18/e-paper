@@ -1,20 +1,23 @@
-"""E-paper display clock application entry point."""
+"""E-paper display with FastAPI control server.
+
+This is the main entry point that starts both:
+1. FastAPI server (main process) - REST API for controlling the display
+2. Display engine (child process) - Manages e-paper hardware and rendering
+
+The API server allows switching between screens without restarting.
+"""
 
 import logging
 
+import uvicorn
 from dotenv import load_dotenv
 
-# Load .env file into os.environ before any imports that call get_settings()
-# Pydantic BaseSettings reads from os.environ, not directly from .env file
+# Load .env file before any imports
 load_dotenv()
 
-from engine import Engine
-from screens import DEFAULT_SCREEN, get_screen
+from api import create_app
 from settings import get_settings
 from utils.log import configure_logging
-
-# Get settings
-settings = get_settings()
 
 # Configure logging
 configure_logging()
@@ -23,26 +26,28 @@ logger = logging.getLogger(__name__)
 
 
 def main():
-    """Initialize and run the e-paper clock display."""
-    # Create screen (using default screen from screens module)
-    screen = get_screen(DEFAULT_SCREEN)
+    """Start FastAPI server with display engine."""
+    settings = get_settings()
 
-    logger.info(f"Starting e-paper clock with screen '{screen.name}'")
-    logger.info(f"Widgets: {[w.__class__.__name__ for w in screen.widgets]}")
-    logger.info(f"Display: {settings.display.WIDTH}x{settings.display.HEIGHT} (Waveshare 7.5\" B/V2)")
-    logger.info(f"Full refresh interval: {settings.display.full_refresh_interval} minutes")
-    logger.info(f"Timezone: {settings.timezone.name} (UTC+{settings.timezone.utc_offset_hours}:{settings.timezone.utc_offset_minutes:02d})")
+    logger.info("=" * 60)
+    logger.info("E-Paper Display - FastAPI Server")
+    logger.info("=" * 60)
+    logger.info(f"API Server: http://{settings.api.host}:{settings.api.port}")
+    logger.info(f"Display: {settings.display.WIDTH}x{settings.display.HEIGHT}")
+    logger.info(f"Log Level: {settings.logging.level}")
+    logger.info("=" * 60)
 
-    # Create and run rendering engine
-    engine = Engine(screen=screen)
+    # Create FastAPI app
+    app = create_app()
 
-    try: 
-        engine.run()
-    except KeyboardInterrupt:
-        logger.info("Received keyboard interrupt, shutting down...")
-        engine.cleanup()
-    except Exception:
-        logger.exception("Unexpected error occurred")
+    # Run server
+    uvicorn.run(
+        app,
+        host=settings.api.host,
+        port=settings.api.port,
+        log_config=None,  # Use our logging config
+        access_log=True,
+    )
 
 
 if __name__ == "__main__":

@@ -113,6 +113,27 @@ class LoggingSettings(BaseSettings):
     )
 
 
+class APISettings(BaseSettings):
+    """FastAPI server settings."""
+
+    host: str = Field(
+        default="0.0.0.0",
+        description="API server host (0.0.0.0 for all interfaces)",
+    )
+    port: int = Field(
+        default=8000,
+        ge=1024,
+        le=65535,
+        description="API server port",
+    )
+
+    model_config = SettingsConfigDict(
+        env_prefix="API_",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+
 class Settings(BaseSettings):
     """Main application settings.
 
@@ -137,12 +158,15 @@ class Settings(BaseSettings):
         TIMEZONE_UTC_OFFSET_HOURS: Hours offset from UTC (default: 5)
         TIMEZONE_UTC_OFFSET_MINUTES: Minutes offset from UTC (default: 30)
         LOG_LEVEL: Logging level - DEBUG/INFO/WARNING/ERROR (default: INFO)
+        API_HOST: API server host (default: 0.0.0.0)
+        API_PORT: API server port (default: 8000)
     """
 
     display: DisplaySettings = Field(default_factory=DisplaySettings)
     weather: WeatherSettings = Field(default_factory=WeatherSettings)
     timezone: TimezoneSettings = Field(default_factory=TimezoneSettings)
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
+    api: APISettings = Field(default_factory=APISettings)
 
     model_config = SettingsConfigDict(
         case_sensitive=False,

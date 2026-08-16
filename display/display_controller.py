@@ -6,7 +6,10 @@ state management, and the main display loop.
 """
 
 import logging
+import queue
 import time
+from multiprocessing import Queue
+from typing import Optional
 
 from PIL import Image, ImageDraw
 
@@ -18,7 +21,7 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
-class Engine:
+class Display:
     """Rendering engine for e-paper display.
 
     Manages the complete rendering pipeline including:
@@ -211,7 +214,35 @@ class Engine:
 
         logger.info(f"Partial refresh completed ({refreshed_count}/{len(partial_widgets)} widgets updated)")
 
-    def run(self) -> None:
+    def switch_screen(self, new_screen: Screen):
+        """Switch to a different screen and do full refresh.
+
+        Args:
+            new_screen: Screen instance to switch to.
+
+        Side Effects:
+            - Changes self.screen to new_screen
+            - Clears state_manager (widgets changed)
+            - Performs immediate full refresh
+            - Updates last_full timestamp
+        """
+        logger.info(f"Switching from '{self.screen.name}' to '{new_screen.name}' screen")
+
+        # Update screen
+        self.screen = new_screen
+
+        # Clear state manager (widgets changed, old states invalid)
+        self.state_manager = PartialStateManager()
+
+        # Do immediate full refresh with new screen
+        self.epd.init()
+        self.full_refresh()
+        self.last_full = DateTimeUtil.now()
+        self.epd.sleep()
+
+        logger.info(f"Screen switched to '{new_screen.name}' successfully")
+
+    def run(self, command_queue: Optional[Queue] = None) -> None:
         """Main rendering loop - manages display update cycles.
 
         Orchestrates the display refresh strategy:
@@ -219,8 +250,14 @@ class Engine:
         - Partial refresh every minute between full refreshes
         - Power management (display sleep between updates)
         - Timing alignment to minute boundaries
+        - Command processing (if command_queue provided)
 
-        The loop runs indefinitely until KeyboardInterrupt or hardware error.
+        Args:
+            command_queue: Optional queue for receiving commands from API server.
+                Commands: {'type': 'switch_screen', 'screen_name': 'name'}
+                         {'type': 'shutdown'}
+
+        The loop runs indefinitely until KeyboardInterrupt or shutdown command.
 
         Raises:
             SystemExit: On KeyboardInterrupt or fatal error.
@@ -232,6 +269,27 @@ class Engine:
         """
         try:
             while True:
+                # Check for commands (non-blocking)
+                if command_queue:
+                    try:
+                        command = command_queue.get_nowait()
+                        logger.info(f"Received command: {command['type']}")
+
+                        if command['type'] == 'shutdown':
+                            logger.info("Shutting down engine...")
+                            break
+
+                        elif command['type'] == 'switch_screen':
+                            from screens import get_screen
+                            screen_name = command['screen_name']
+                            new_screen = get_screen(screen_name)
+                            self.switch_screen(new_screen)
+                            # Skip normal refresh cycle this iteration
+                            continue
+
+                    except queue.Empty:
+                        pass  # No commands, continue normal operation
+
                 # Get current time in IST timezone
                 now = DateTimeUtil.now()
                 minute = now.minute
