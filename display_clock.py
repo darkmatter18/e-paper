@@ -239,7 +239,8 @@ def clock() -> None:
 
     Power Management:
         - Display sleeps (low power mode) between updates
-        - 60-second sleep between refresh cycles
+        - Calculates sleep time to wake at start of next minute
+        - Ensures updates happen at :00 seconds of each minute
         - Reduces power consumption and extends display lifetime
 
     Error Handling:
@@ -297,7 +298,11 @@ def clock() -> None:
                     last_full = now
                     epd.sleep()
 
-            time.sleep(60)  # Wait one minute before next cycle
+            # Calculate sleep time to wake at the start of the next minute
+            seconds_elapsed = now.second + (now.microsecond / 1_000_000)
+            sleep_time = 60 - seconds_elapsed
+            logger.debug(f"Sleeping for {sleep_time:.2f} seconds until next minute")
+            time.sleep(sleep_time)
 
     except OSError as e:
         # Hardware communication error (SPI/GPIO issue)
