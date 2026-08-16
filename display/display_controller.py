@@ -307,19 +307,30 @@ class Display:
                     self.last_full = now
                     self.epd.sleep()
                 else:
-                    # Partial refresh: only widgets that support it (black channel)
-                    if self.state_manager.has_state():
-                        self.epd.init_part()
-                        self.partial_refresh()
-                        self.epd.sleep()
+                    # Check if any widgets support partial refresh
+                    has_partial_refresh_widgets = any(
+                        w.supports_partial_refresh for w in self.screen.widgets
+                    )
+
+                    if has_partial_refresh_widgets:
+                        # Partial refresh: only widgets that support it (black channel)
+                        if self.state_manager.has_state():
+                            self.epd.init_part()
+                            self.partial_refresh()
+                            self.epd.sleep()
+                        else:
+                            # Fallback: no previous state, do full refresh
+                            logger.warning(
+                                "No state for partial refresh, falling back to full refresh"
+                            )
+                            self.full_refresh()
+                            self.last_full = now
+                            self.epd.sleep()
                     else:
-                        # Fallback: no previous state, do full refresh
-                        logger.warning(
-                            "No state for partial refresh, falling back to full refresh"
+                        # No partial refresh widgets - skip until next full refresh
+                        logger.debug(
+                            "No partial-refresh widgets, skipping refresh this minute"
                         )
-                        self.full_refresh()
-                        self.last_full = now
-                        self.epd.sleep()
 
                 # Calculate sleep time to wake at start of next minute
                 now_after_render = DateTimeUtil.now()
