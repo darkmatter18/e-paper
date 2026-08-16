@@ -1,4 +1,5 @@
 """E-paper display clock using modular widget architecture."""
+
 import logging
 import sys
 import time
@@ -8,6 +9,7 @@ from PIL import Image, ImageDraw
 from lib.waveshare_epd import epd7in5b_V2
 from utils import DateTimeUtil
 from widgets import ClockWidget, DateWidget, QuoteWidget, WeatherWidget
+from widgets.widget import Widget
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -27,7 +29,57 @@ quote_widget = QuoteWidget()
 weather_widget = WeatherWidget()
 
 # All widgets for rendering
-ALL_WIDGETS = [clock_widget, date_widget, weather_widget, quote_widget]
+ALL_WIDGETS: list[Widget] = [clock_widget, date_widget, weather_widget, quote_widget]
+
+
+class PartialStateManager:
+    """Manages previous state for partial refresh widgets."""
+
+    def __init__(self):
+        """Initialize state manager with empty state."""
+        self._states = {}  # widget -> previous region image
+
+    def get_old_region(self, widget):
+        """Get previous region image for a widget.
+
+        Args:
+            widget: Widget to get state for
+
+        Returns:
+            PIL Image of previous region, or None if no previous state
+        """
+        return self._states.get(widget)
+
+    def update_state(self, widget, new_region):
+        """Update stored state for a widget.
+
+        Args:
+            widget: Widget to update state for
+            new_region: New region image to store
+        """
+        self._states[widget] = new_region.copy()
+
+    def update_from_full_frame(self, full_frame):
+        """Extract and store regions for all partial-refresh widgets from full frame.
+
+        Args:
+            full_frame: Full display image (800x480)
+        """
+        for widget in ALL_WIDGETS:
+            if widget.supports_partial_refresh:
+                region = widget.region
+                extracted = extract_region(
+                    full_frame, region.x, region.y, region.width, region.height
+                )
+                self.update_state(widget, extracted)
+
+    def has_state(self):
+        """Check if manager has any stored state.
+
+        Returns:
+            True if any widget state is stored
+        """
+        return len(self._states) > 0
 
 
 def to_buffer(image):
@@ -42,15 +94,13 @@ def to_buffer(image):
     return bytearray(image.convert("1").tobytes("raw"))
 
 
-def full_refresh(epd, now):
+def full_refresh(epd, now, state_manager):
     """Full display refresh with all widgets.
 
     Args:
         epd: E-paper display object
         now: Current datetime
-
-    Returns:
-        Full display frame (800x480) for next partial refresh
+        state_manager: PartialStateManager to update with new state
     """
     logger.info("Full refresh")
     epd.init()
@@ -70,101 +120,95 @@ def full_refresh(epd, now):
     # Display to e-paper
     epd.display(epd.getbuffer(black), epd.getbuffer(red))
 
-    # Return full frame for next partial refresh
-    return black
+    # Update state manager with new widget states
+    state_manager.update_from_full_frame(black)
 
 
-def get_partial_refresh_region():
-    """Calculate bounding box encompassing all partial-refresh widgets.
-
-    Returns:
-        tuple: (x, y, width, height) or None if no widgets support partial refresh
-    """
-    regions = [w.region for w in ALL_WIDGETS if w.supports_partial_refresh]
-
-    if not regions:
-        return None
-
-    # Calculate bounding box
-    min_x = min(r.x for r in regions)
-    min_y = min(r.y for r in regions)
-    max_x = max(r.x + r.width for r in regions)
-    max_y = max(r.y + r.height for r in regions)
-
-    return (min_x, min_y, max_x - min_x, max_y - min_y)
-
-
-def render_partial_frame(now):
-    """Render full display (800x480) with only partial-refresh widgets.
+def extract_region(image, x, y, width, height):
+    """Extract a region from a full display image.
 
     Args:
-        now: Current datetime
+        image: Full display image (800x480)
+        x: Region left edge
+        y: Region top edge
+        width: Region width
+        height: Region height
 
     Returns:
-        PIL Image (800x480) with partial-refresh widgets rendered
+        PIL Image of just the region
     """
-    black = Image.new("1", (DISPLAY_W, DISPLAY_H), 255)
-    db = ImageDraw.Draw(black)
-
-    # Each widget renders at its own coordinates
-    for widget in ALL_WIDGETS:
-        if widget.supports_partial_refresh:
-            widget.draw(db, red_draw=None, now=now)
-
-    return black
+    return image.crop((x, y, x + width, y + height))
 
 
-def partial_refresh(epd, now, old_frame):
+def partial_refresh(epd, now, state_manager):
     """Partial refresh all widgets that support it.
+
+    Each widget's region is refreshed independently with region-specific buffers.
 
     Args:
         epd: E-paper display object
         now: Current datetime
-        old_frame: Previous full display frame (800x480)
-
-    Returns:
-        New full display frame (800x480)
+        state_manager: PartialStateManager with previous widget states
     """
     from lib.waveshare_epd import epdconfig
 
-    # Render new frame
-    new_frame = render_partial_frame(now)
+    # Refresh each partial-refresh widget independently
+    for widget in ALL_WIDGETS:
+        if not widget.supports_partial_refresh:
+            continue
 
-    # Get bounding region
-    region = get_partial_refresh_region()
-    if not region:
-        return old_frame  # No partial refresh widgets
+        # Get old region from state manager
+        old_region = state_manager.get_old_region(widget)
+        if old_region is None:
+            logger.warning(
+                f"No previous state for {widget.__class__.__name__}, skipping partial refresh"
+            )
+            continue
 
-    x, y, w, h = region
+        # Render new region for this widget
+        # Widget draws at its coordinates in full display space
+        # We need to create a temporary full-size image, let widget draw, then extract region
+        region = widget.region
+        temp_full = Image.new("1", (DISPLAY_W, DISPLAY_H), 255)
+        temp_draw = ImageDraw.Draw(temp_full)
+        widget.draw(temp_draw, red_draw=None, now=now)
 
-    # Convert to buffers
-    old_buf = to_buffer(old_frame)
-    new_buf = to_buffer(new_frame)
+        # Extract the widget's region from temp image
+        new_region = extract_region(
+            temp_full, region.x, region.y, region.width, region.height
+        )
 
-    # Send partial refresh commands
-    epd.send_command(0x91)
-    epd.send_command(0x90)
-    epd.send_data(x // 256)
-    epd.send_data(x % 256)
-    epd.send_data((x + w - 1) // 256)
-    epd.send_data((x + w - 1) % 256)
-    epd.send_data(y // 256)
-    epd.send_data(y % 256)
-    epd.send_data((y + h - 1) // 256)
-    epd.send_data((y + h - 1) % 256)
-    epd.send_data(0x01)
+        # Convert region images to buffers
+        old_buf = to_buffer(old_region)
+        new_buf = to_buffer(new_region)
 
-    epd.send_command(0x10)  # Old buffer
-    epd.send_data2(old_buf)
+        # Send partial refresh commands for this widget's region
+        x, y, w, h = region.x, region.y, region.width, region.height
 
-    epd.send_command(0x13)  # New buffer
-    epd.send_data2(new_buf)
+        epd.send_command(0x91)
+        epd.send_command(0x90)
+        epd.send_data(x // 256)
+        epd.send_data(x % 256)
+        epd.send_data((x + w - 1) // 256)
+        epd.send_data((x + w - 1) % 256)
+        epd.send_data(y // 256)
+        epd.send_data(y % 256)
+        epd.send_data((y + h - 1) // 256)
+        epd.send_data((y + h - 1) % 256)
+        epd.send_data(0x01)
 
-    epd.send_command(0x12)  # Refresh
-    epdconfig.delay_ms(100)
-    epd.ReadBusy()
+        epd.send_command(0x10)  # Old buffer
+        epd.send_data2(old_buf)
 
-    return new_frame
+        epd.send_command(0x13)  # New buffer
+        epd.send_data2(new_buf)
+
+        epd.send_command(0x12)  # Refresh
+        epdconfig.delay_ms(100)
+        epd.ReadBusy()
+
+        # Update state manager with new region
+        state_manager.update_state(widget, new_region)
 
 
 def clock():
@@ -177,9 +221,9 @@ def clock():
         epd.init()
         epd.Clear()
 
-        # Track state
+        # Initialize state manager
+        state_manager = PartialStateManager()
         last_full = None
-        old_frame = None  # Track full display frame (800x480) for partial refresh
 
         while True:
             now = DateTimeUtil.now()
@@ -193,19 +237,19 @@ def clock():
             )
 
             if need_full:
-                old_frame = full_refresh(epd, now)
+                full_refresh(epd, now, state_manager)
                 last_full = now
                 epd.sleep()
                 time.sleep(60)  # Sleep for a minute after full refresh
             else:
                 # Partial refresh: update all widgets that support it
-                if old_frame is not None:
+                if state_manager.has_state():
                     epd.init_part()
-                    old_frame = partial_refresh(epd, now, old_frame)
+                    partial_refresh(epd, now, state_manager)
                     epd.sleep()
                 else:
-                    # Fallback: if we don't have old_frame, do full refresh
-                    old_frame = full_refresh(epd, now)
+                    # Fallback: if we don't have previous state, do full refresh
+                    full_refresh(epd, now, state_manager)
                     last_full = now
                     epd.sleep()
 
