@@ -22,7 +22,8 @@ class StatusBarWidget(Widget):
     """
 
     # WiFi icon (Font Awesome 7)
-    WIFI_ICON = ""  # f1eb - main wifi icon
+    WIFI_ICON = ""  # f1eb - main wifi icon
+    CPU_ICON = ""  # f2db - microchip icon
 
     def __init__(self, region: WidgetRegion):
         """Initialize status bar widget.
@@ -117,6 +118,7 @@ class StatusBarWidget(Widget):
 
         # Prepare status content
         wifi_icon = self.WIFI_ICON
+        cpu_icon = self.CPU_ICON
         signal_strength = self._get_signal_strength(info.wifi_strength)
         temp_text = f"{int(info.cpu_temp)}°C"
 
@@ -126,6 +128,7 @@ class StatusBarWidget(Widget):
         # Calculate positions (right-aligned with padding)
         right_padding = 20
         spacing = 14
+        icon_spacing = 8
         current_x = self.region.x + self.region.width - right_padding
 
         # Draw temperature text (rightmost) - align to center (semibold weight 600)
@@ -136,9 +139,18 @@ class StatusBarWidget(Widget):
 
         black_draw.text((temp_x, temp_y), temp_text, font=text_font, fill=0)
 
-        # Draw signal dots (left of temperature) - use same center
-        dots_width = 4 * 22  # 4 dots with 22px spacing
-        current_x = temp_x - spacing - dots_width
+        # Draw CPU icon (left of temperature)
+        current_x = temp_x - icon_spacing
+        cpu_bbox = black_draw.textbbox((0, 0), cpu_icon, font=icon_font)
+        cpu_width = cpu_bbox[2] - cpu_bbox[0]
+        cpu_x = current_x - cpu_width
+        cpu_y = 5
+
+        black_draw.text((cpu_x, cpu_y), cpu_icon, font=icon_font, fill=0)
+
+        # Draw signal dots (left of CPU icon) - use same center
+        dots_width = 4 * 25  # 4 dots with 25px spacing (updated from code)
+        current_x = cpu_x - spacing - dots_width
 
         self._draw_signal_dots(black_draw, int(current_x), center_y, signal_strength)
 

@@ -13,7 +13,7 @@ AVAILABLE_SCREENS: dict[str, Callable[[], Screen]] = {
 }
 
 # Default screen name
-DEFAULT_SCREEN = "todays_weather"
+DEFAULT_SCREEN = "datetime_weather_forecast"
 
 
 def get_screen(name: str) -> Screen:
