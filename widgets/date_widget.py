@@ -59,9 +59,15 @@ class DateWidget(Widget):
         region: WidgetRegion(x=0, y=240, width=400, height=240) - bottom-left quadrant
     """
 
-    def __init__(self):
-        """Initialize date widget with bottom-left quadrant region."""
-        super().__init__(WidgetRegion(x=0, y=240, width=400, height=240))
+    def __init__(self, region: WidgetRegion | None = None):
+        """Initialize date widget.
+
+        Args:
+            region: Widget display region (defaults to bottom-left quadrant)
+        """
+        if region is None:
+            region = WidgetRegion(x=0, y=240, width=400, height=240)
+        super().__init__(region)
 
     def draw(self, black_draw: ImageDraw.ImageDraw, red_draw: ImageDraw.ImageDraw | None = None, **kwargs):
         """Draw date information in two-tier layout.

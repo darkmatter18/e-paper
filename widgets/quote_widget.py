@@ -65,13 +65,18 @@ class QuoteWidget(Widget):
         quote_service: ZenQuotesService instance for fetching daily quotes
     """
 
-    def __init__(self):
+    def __init__(self, region: WidgetRegion | None = None):
         """Initialize quote widget with ZenQuotes service.
+
+        Args:
+            region: Widget display region (defaults to bottom-right quadrant)
 
         Creates a self-contained widget that handles quote fetching and caching
         internally via ZenQuotesService.
         """
-        super().__init__(WidgetRegion(x=400, y=240, width=400, height=240))
+        if region is None:
+            region = WidgetRegion(x=400, y=240, width=400, height=240)
+        super().__init__(region)
         self.quote_service = ZenQuotesService()
 
     def draw(self, black_draw: ImageDraw.ImageDraw, red_draw: ImageDraw.ImageDraw | None = None, **kwargs):

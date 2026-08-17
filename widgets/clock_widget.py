@@ -68,9 +68,15 @@ class ClockWidget(Widget):
         region: WidgetRegion(x=0, y=0, width=400, height=240) - upper-left quadrant
     """
 
-    def __init__(self):
-        """Initialize clock widget with upper-left quadrant region."""
-        super().__init__(WidgetRegion(x=0, y=0, width=400, height=240))
+    def __init__(self, region: WidgetRegion | None = None):
+        """Initialize clock widget.
+
+        Args:
+            region: Widget display region (defaults to upper-left quadrant)
+        """
+        if region is None:
+            region = WidgetRegion(x=0, y=0, width=400, height=240)
+        super().__init__(region)
 
     @property
     def supports_partial_refresh(self) -> bool:

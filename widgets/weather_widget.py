@@ -82,8 +82,11 @@ class WeatherWidget(Widget):
         lon: Location longitude from settings.weather.longitude
     """
 
-    def __init__(self):
+    def __init__(self, region: WidgetRegion | None = None):
         """Initialize weather widget with service and location.
+
+        Args:
+            region: Widget display region (defaults to upper-right quadrant)
 
         Reads configuration from Pydantic settings (settings.weather):
         - api_key: Required for API access (WEATHER_API_KEY env var)
@@ -93,7 +96,9 @@ class WeatherWidget(Widget):
         Raises:
             KeyError: If WEATHER_API_KEY is not set (handled by service layer).
         """
-        super().__init__(WidgetRegion(x=400, y=0, width=400, height=240))
+        if region is None:
+            region = WidgetRegion(x=400, y=0, width=400, height=240)
+        super().__init__(region)
         settings = get_settings()
         self.weather_service: WeatherService = OpenWeatherMapService(settings.weather.api_key)
 
