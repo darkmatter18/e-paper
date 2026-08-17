@@ -23,3 +23,4 @@ FONT_RIGHTEOUS: Path = FONTS_DIR / "Righteous-Regular.ttf"
 
 # Icon fonts
 FONT_WEATHER_ICONS: Path = FONTS_DIR / "weathericons-regular-webfont.ttf"
+FONT_AWESOME: Path = FONTS_DIR / "Font Awesome 7 Free-Solid-900.otf"
