@@ -19,7 +19,7 @@ class StatusBarWidget(Widget):
     styled like macOS menu bar with icons on the right side.
 
     Region: Full width (800x40) at top of display
-    Colors: Black background, white icons and text
+    Colors: White background, black icons and text, thin separator line
     Updates: Every minute (supports partial refresh)
     """
 
@@ -84,17 +84,6 @@ class StatusBarWidget(Widget):
         icon_font = ImageFont.truetype(str(FONT_AWESOME), 20)
         text_font = ImageFont.truetype(str(FONT_GEOMINI), 16)
 
-        # Draw black background bar
-        black_draw.rectangle(
-            [
-                self.region.x,
-                self.region.y,
-                self.region.x + self.region.width,
-                self.region.y + self.region.height,
-            ],
-            fill=0,  # Black
-        )
-
         # Prepare status text
         wifi_icon = self._get_wifi_icon(info.wifi_strength)
         temp_text = f"{int(info.cpu_temp)}°C"
@@ -110,7 +99,7 @@ class StatusBarWidget(Widget):
         temp_x = current_x - temp_width
         temp_y = self.region.y + (self.region.height - temp_bbox[3]) // 2
 
-        black_draw.text((temp_x, temp_y), temp_text, font=text_font, fill=255)  # White
+        black_draw.text((temp_x, temp_y), temp_text, font=text_font, fill=0)  # Black
 
         # Draw WiFi icon (left of temperature)
         current_x = temp_x - spacing
@@ -119,4 +108,18 @@ class StatusBarWidget(Widget):
         icon_x = current_x - icon_width
         icon_y = self.region.y + (self.region.height - icon_bbox[3]) // 2
 
-        black_draw.text((icon_x, icon_y), wifi_icon, font=icon_font, fill=255)  # White
+        black_draw.text((icon_x, icon_y), wifi_icon, font=icon_font, fill=0)  # Black
+
+    def draw_decorations(self, black_draw: ImageDraw.ImageDraw):
+        """Draw separator line at bottom of status bar.
+
+        Args:
+            black_draw: PIL ImageDraw for black channel
+        """
+        # Draw thin line at bottom to separate from widgets below
+        y = self.region.y + self.region.height - 1
+        black_draw.line(
+            [(self.region.x, y), (self.region.x + self.region.width, y)],
+            fill=0,
+            width=1,
+        )
