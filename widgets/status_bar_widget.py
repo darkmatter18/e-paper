@@ -129,7 +129,7 @@ class StatusBarWidget(Widget):
         temp_bbox = black_draw.textbbox((0, 0), temp_text, font=text_font)
         temp_width = temp_bbox[2] - temp_bbox[0]
         temp_x = current_x - temp_width
-        temp_y = 5
+        temp_y = 0
 
         black_draw.text((temp_x, temp_y), temp_text, font=text_font, fill=0)
 
