@@ -9,13 +9,13 @@ This is the default screen showing all available widgets:
 
 Layout:
 ┌───────────────────────────────────────────────┬─────────┐
-│                                               │ 📶  45°C│  ← Status bar (800x40)
+│                                               │ 📶  45°C│  ← Status bar (800x30)
 ├─────────────────┬─────────────────────────────┴─────────┤
 │  ClockWidget    │  WeatherWidget                         │
-│  (0,40,400x220) │  (400,40,400x220)                     │
+│  (0,30,400x225) │  (400,30,400x225)                     │
 ├─────────────────┼────────────────────────────────────────┤
 │  DateWidget     │  QuoteWidget                           │
-│  (0,260,400x220)│  (400,260,400x220)                    │
+│  (0,255,400x225)│  (400,255,400x225)                    │
 └─────────────────┴────────────────────────────────────────┘
 """
 
@@ -38,11 +38,11 @@ def create_datetime_weather_forecast_screen() -> Screen:
     """
     return Screen(
         widgets=[
-            StatusBarWidget(WidgetRegion(x=0, y=0, width=800, height=40)),
-            ClockWidget(WidgetRegion(x=0, y=40, width=400, height=220)),
-            WeatherWidget(WidgetRegion(x=400, y=40, width=400, height=220)),
-            DateWidget(WidgetRegion(x=0, y=260, width=400, height=220)),
-            QuoteWidget(WidgetRegion(x=400, y=260, width=400, height=220)),
+            StatusBarWidget(WidgetRegion(x=0, y=0, width=800, height=30)),
+            ClockWidget(WidgetRegion(x=0, y=30, width=400, height=225)),
+            WeatherWidget(WidgetRegion(x=400, y=30, width=400, height=225)),
+            DateWidget(WidgetRegion(x=0, y=255, width=400, height=225)),
+            QuoteWidget(WidgetRegion(x=400, y=255, width=400, height=225)),
         ],
         name="Datetime Weather Forecast",
     )
