@@ -128,9 +128,8 @@ class StatusBarWidget(Widget):
         # Draw temperature text (rightmost) - align to center
         temp_bbox = black_draw.textbbox((0, 0), temp_text, font=text_font)
         temp_width = temp_bbox[2] - temp_bbox[0]
-        temp_height = temp_bbox[3] - temp_bbox[1]
         temp_x = current_x - temp_width
-        temp_y = center_y - temp_height // 2
+        temp_y = 5
 
         black_draw.text((temp_x, temp_y), temp_text, font=text_font, fill=0)
 
@@ -144,8 +143,7 @@ class StatusBarWidget(Widget):
         current_x = current_x - spacing
         icon_bbox = black_draw.textbbox((0, 0), wifi_icon, font=icon_font)
         icon_width = icon_bbox[2] - icon_bbox[0]
-        icon_height = icon_bbox[3] - icon_bbox[1]
         icon_x = current_x - icon_width
-        icon_y = center_y - icon_height // 2
+        icon_y = 5
 
         black_draw.text((icon_x, icon_y), wifi_icon, font=icon_font, fill=0)
