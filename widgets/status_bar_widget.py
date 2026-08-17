@@ -69,8 +69,8 @@ class StatusBarWidget(Widget):
             y: Center Y position
             strength: Signal strength level (1-4)
         """
-        dot_radius = 3
-        dot_spacing = 8
+        dot_radius = 11  # Extra large dots (22px diameter - fills 26px height)
+        dot_spacing = 22  # More spacing for larger dots
         total_dots = 4
 
         for i in range(total_dots):
@@ -108,9 +108,9 @@ class StatusBarWidget(Widget):
         # Get system info
         info = self.system_service.get_system_info()
 
-        # Load fonts
-        icon_font = ImageFont.truetype(str(FONT_AWESOME), 18)
-        text_font = ImageFont.truetype(str(FONT_GEOMINI), 14)
+        # Load fonts (extra large sizes to fill ~26px of 30px height)
+        icon_font = ImageFont.truetype(str(FONT_AWESOME), 26)
+        text_font = ImageFont.truetype(str(FONT_GEOMINI), 22)
 
         # Prepare status content
         wifi_icon = self.WIFI_ICON
@@ -119,7 +119,7 @@ class StatusBarWidget(Widget):
 
         # Calculate positions (right-aligned with padding)
         right_padding = 20
-        spacing = 10
+        spacing = 14
         current_x = self.region.x + self.region.width - right_padding
 
         # Draw temperature text (rightmost)
@@ -132,7 +132,7 @@ class StatusBarWidget(Widget):
         black_draw.text((temp_x, temp_y), temp_text, font=text_font, fill=0)
 
         # Draw signal dots (left of temperature)
-        dots_width = 4 * 8  # 4 dots with 8px spacing
+        dots_width = 4 * 22  # 4 dots with 22px spacing
         current_x = temp_x - spacing - dots_width
         dots_y = self.region.y + self.region.height // 2
 
