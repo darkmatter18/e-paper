@@ -70,7 +70,7 @@ class StatusBarWidget(Widget):
             strength: Signal strength level (1-4)
         """
         dot_radius = 11  # Extra large dots (22px diameter - fills 26px height)
-        dot_spacing = 22  # More spacing for larger dots
+        dot_spacing = 25  # More spacing for larger dots
         total_dots = 4
 
         for i in range(total_dots):
@@ -117,33 +117,35 @@ class StatusBarWidget(Widget):
         signal_strength = self._get_signal_strength(info.wifi_strength)
         temp_text = f"{int(info.cpu_temp)}°C"
 
+        # Calculate common vertical center for all elements
+        center_y = self.region.y + self.region.height // 2
+
         # Calculate positions (right-aligned with padding)
         right_padding = 20
         spacing = 14
         current_x = self.region.x + self.region.width - right_padding
 
-        # Draw temperature text (rightmost)
+        # Draw temperature text (rightmost) - align to center
         temp_bbox = black_draw.textbbox((0, 0), temp_text, font=text_font)
         temp_width = temp_bbox[2] - temp_bbox[0]
         temp_height = temp_bbox[3] - temp_bbox[1]
         temp_x = current_x - temp_width
-        temp_y = self.region.y + (self.region.height - temp_height) // 2
+        temp_y = center_y - temp_height // 2
 
         black_draw.text((temp_x, temp_y), temp_text, font=text_font, fill=0)
 
-        # Draw signal dots (left of temperature)
+        # Draw signal dots (left of temperature) - use same center
         dots_width = 4 * 22  # 4 dots with 22px spacing
         current_x = temp_x - spacing - dots_width
-        dots_y = self.region.y + self.region.height // 2
 
-        self._draw_signal_dots(black_draw, int(current_x), dots_y, signal_strength)
+        self._draw_signal_dots(black_draw, int(current_x), center_y, signal_strength)
 
-        # Draw WiFi icon (left of signal dots)
+        # Draw WiFi icon (left of signal dots) - align to center
         current_x = current_x - spacing
         icon_bbox = black_draw.textbbox((0, 0), wifi_icon, font=icon_font)
         icon_width = icon_bbox[2] - icon_bbox[0]
         icon_height = icon_bbox[3] - icon_bbox[1]
         icon_x = current_x - icon_width
-        icon_y = self.region.y + (self.region.height - icon_height) // 2
+        icon_y = center_y - icon_height // 2
 
         black_draw.text((icon_x, icon_y), wifi_icon, font=icon_font, fill=0)
