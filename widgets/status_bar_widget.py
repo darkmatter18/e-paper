@@ -112,6 +112,9 @@ class StatusBarWidget(Widget):
         icon_font = ImageFont.truetype(str(FONT_AWESOME), 26)
         text_font = ImageFont.truetype(str(FONT_GEOMINI), 22)
 
+        # Set Geomini to semibold (weight 600) for temperature text
+        text_font.set_variation_by_axes([600])
+
         # Prepare status content
         wifi_icon = self.WIFI_ICON
         signal_strength = self._get_signal_strength(info.wifi_strength)
@@ -125,7 +128,7 @@ class StatusBarWidget(Widget):
         spacing = 14
         current_x = self.region.x + self.region.width - right_padding
 
-        # Draw temperature text (rightmost) - align to center
+        # Draw temperature text (rightmost) - align to center (semibold weight 600)
         temp_bbox = black_draw.textbbox((0, 0), temp_text, font=text_font)
         temp_width = temp_bbox[2] - temp_bbox[0]
         temp_x = current_x - temp_width
