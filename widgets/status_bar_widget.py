@@ -110,7 +110,7 @@ class StatusBarWidget(Widget):
         info = self.system_service.get_system_info()
 
         # Load fonts (extra large sizes to fill ~26px of 30px height)
-        icon_font = ImageFont.truetype(str(FONT_AWESOME), 26)
+        icon_font = ImageFont.truetype(str(FONT_AWESOME), 22)
         text_font = ImageFont.truetype(str(FONT_GEOMINI), 22)
 
         # Set Geomini to semibold (weight 600) for temperature text
