@@ -9,10 +9,11 @@ Exports:
 from widgets.base import Widget, WidgetRegion
 
 # Shared widgets
-from widgets.shared import StatusBarWidget
+from widgets.shared import GuideWidget, StatusBarWidget
 
 __all__ = [
     # Shared
+    "GuideWidget",
     "StatusBarWidget",
     # Base
     "Widget",
