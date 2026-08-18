@@ -1,12 +1,14 @@
 from collections.abc import Callable  # noqa: N999
 
 from screens.datetime_weather_forecast import create_datetime_weather_forecast_screen
+from screens.digital_clock import create_digital_clock_screen
 from screens.todays_weather import create_todays_weather_screen
 from utils.screen import Screen
 
 # Screen registry - maps screen names to factory functions
 AVAILABLE_SCREENS: dict[str, Callable[[], Screen]] = {
     "datetime_weather_forecast": create_datetime_weather_forecast_screen,
+    "digital_clock": create_digital_clock_screen,
     "todays_weather": create_todays_weather_screen,
 }
 
