@@ -1,18 +1,30 @@
-from widgets.clock_widget import ClockWidget  # noqa: N999
-from widgets.date_widget import DateWidget
-from widgets.quote_widget import QuoteWidget
-from widgets.status_bar_widget import StatusBarWidget
-from widgets.todays_weather_widget import TodaysWeatherWidget
-from widgets.weather_widget import WeatherWidget
-from widgets.widget import Widget, WidgetRegion
+"""Widget system for e-paper display.
+
+Exports:
+    - Base classes from widgets.base
+    - Shared widgets from widgets.shared
+"""
+
+# Base classes
+from widgets.base import Widget, WidgetRegion
+
+# Shared widgets
+from widgets.shared import (
+    ClockWidget,
+    DateWidget,
+    QuoteWidget,
+    StatusBarWidget,
+    WeatherWidget,
+)
 
 __all__ = [
+    # Base
+    "Widget",
+    "WidgetRegion",
+    # Shared
     "ClockWidget",
     "DateWidget",
     "QuoteWidget",
     "StatusBarWidget",
-    "TodaysWeatherWidget",
     "WeatherWidget",
-    "Widget",
-    "WidgetRegion",
 ]

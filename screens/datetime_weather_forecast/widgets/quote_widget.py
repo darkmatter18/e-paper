@@ -40,7 +40,7 @@ from PIL import ImageDraw, ImageFont
 
 from services.quote.zenquotes_service import ZenQuotesService
 from settings.fonts import FONT_GEOMINI, FONT_PLAYFAIR, FONT_PLAYFAIR_ITALIC
-from widgets.widget import Widget, WidgetRegion
+from widgets.base import Widget, WidgetRegion
 
 logger = logging.getLogger(__name__)
 

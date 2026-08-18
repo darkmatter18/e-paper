@@ -7,7 +7,7 @@ from PIL import ImageDraw, ImageFont
 
 from services.system import SystemService
 from settings.fonts import FONT_AWESOME, FONT_GEOMINI
-from widgets.widget import Widget, WidgetRegion
+from widgets.base import Widget, WidgetRegion
 
 
 class StatusBarWidget(Widget):

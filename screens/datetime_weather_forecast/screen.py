@@ -19,15 +19,14 @@ Layout:
 └─────────────────┴────────────────────────────────────────┘
 """
 
-from utils import Screen
-from widgets import (
+from screens.datetime_weather_forecast.widgets import (
     ClockWidget,
     DateWidget,
     QuoteWidget,
-    StatusBarWidget,
     WeatherWidget,
-    WidgetRegion,
 )
+from utils import Screen
+from widgets import StatusBarWidget, WidgetRegion
 
 
 def create_datetime_weather_forecast_screen() -> Screen:

@@ -36,7 +36,7 @@ from services.weather import WeatherService
 from services.weather.openweathermap_service import OpenWeatherMapService
 from settings import get_settings
 from settings.fonts import FONT_RIGHTEOUS, FONT_WEATHER_ICONS
-from widgets.widget import Widget, WidgetRegion
+from widgets.base import Widget, WidgetRegion
 
 # Weather display fonts
 FONT_WEATHER_TEMP = ImageFont.truetype(str(FONT_RIGHTEOUS), 28)  # Current temperature

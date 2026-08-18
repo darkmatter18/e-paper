@@ -37,8 +37,8 @@ Use Case:
     Perfect for checking before leaving home.
 """
 
+from screens.todays_weather.widgets import TodaysWeatherWidget
 from utils import Screen
-from widgets import TodaysWeatherWidget
 
 
 def create_todays_weather_screen() -> Screen:

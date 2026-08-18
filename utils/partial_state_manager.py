@@ -7,7 +7,7 @@ both old and new buffers to determine which pixels to update during partial refr
 
 from PIL import Image
 
-from widgets.widget import Widget
+from widgets.base import Widget
 
 
 class PartialStateManager:

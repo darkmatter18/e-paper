@@ -1,9 +1,7 @@
 from collections.abc import Callable  # noqa: N999
 
-from screens.datetime_weather_forecast_screen import (
-    create_datetime_weather_forecast_screen,
-)
-from screens.todays_weather_screen import create_todays_weather_screen
+from screens.datetime_weather_forecast import create_datetime_weather_forecast_screen
+from screens.todays_weather import create_todays_weather_screen
 from utils.screen import Screen
 
 # Screen registry - maps screen names to factory functions

@@ -26,7 +26,7 @@ from services.weather import OpenWeatherMapService, WeatherService
 from settings import get_settings
 from settings.fonts import FONT_GEOMINI, FONT_RIGHTEOUS, FONT_WEATHER_ICONS
 from utils import DateTimeUtil
-from widgets.widget import Widget, WidgetRegion
+from widgets.base import Widget, WidgetRegion
 
 logger = logging.getLogger(__name__)
 

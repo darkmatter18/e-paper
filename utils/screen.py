@@ -5,7 +5,7 @@ e-paper display. It provides a clean interface for widget management and queries
 separating the widget composition from the rendering framework.
 """
 
-from widgets.widget import Widget
+from widgets.base import Widget
 
 
 class Screen:

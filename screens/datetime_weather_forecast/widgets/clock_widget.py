@@ -28,7 +28,7 @@ from PIL import ImageDraw, ImageFont
 
 from settings.fonts import FONT_GEOMINI
 from utils import DateTimeUtil
-from widgets.widget import Widget, WidgetRegion
+from widgets.base import Widget, WidgetRegion
 
 # Clock geometry constants
 CX, CY = 100, 120  # Center point of analog clock face in display coordinates

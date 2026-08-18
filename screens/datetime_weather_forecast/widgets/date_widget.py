@@ -29,7 +29,7 @@ from PIL import ImageDraw, ImageFont
 
 from settings.fonts import FONT_GEOMINI, FONT_HENNYPENNY
 from utils.datetime_util import DateTimeUtil
-from widgets.widget import Widget, WidgetRegion
+from widgets.base import Widget, WidgetRegion
 
 # Date display fonts
 FONT_DATE_DAY = ImageFont.truetype(str(FONT_GEOMINI), 60)  # Weekday
