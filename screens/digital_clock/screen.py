@@ -7,7 +7,7 @@ from screens.digital_clock.widgets import (
     MinutesWidget,
 )
 from utils.screen import Screen
-from widgets import StatusBarWidget, WidgetRegion
+from widgets import GuideWidget, StatusBarWidget, WidgetRegion
 
 
 def create_digital_clock_screen() -> Screen:
@@ -38,5 +38,8 @@ def create_digital_clock_screen() -> Screen:
 
             # AM/PM offset vertically to align with text baseline
             AmPmWidget(WidgetRegion(x=540, y=220, width=140, height=130)),
+
+            # Debug guide - crosshairs at screen center
+            GuideWidget(WidgetRegion(x=0, y=0, width=800, height=480)),
         ],
     )
