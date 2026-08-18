@@ -32,14 +32,8 @@ def create_digital_clock_screen() -> Screen:
 
             # Time components - centered on screen
             # Using generous regions, each widget centers its content within
-            HoursWidget(WidgetRegion(x=100, y=150, width=180, height=200)),
-            ColonWidget(WidgetRegion(x=280, y=150, width=80, height=200)),
-            MinutesWidget(WidgetRegion(x=360, y=150, width=180, height=200)),
-
-            # AM/PM offset vertically to align with text baseline
-            AmPmWidget(WidgetRegion(x=540, y=220, width=140, height=130)),
-
-            # Debug guide - crosshairs at screen center
-            GuideWidget(WidgetRegion(x=0, y=0, width=800, height=480)),
+            HoursWidget(WidgetRegion(x=120, y=77, width=180, height=200)),
+            ColonWidget(WidgetRegion(x=357, y=65, width=80, height=200)),
+            MinutesWidget(WidgetRegion(x=500, y=77, width=180, height=200)),
         ],
     )
