@@ -32,10 +32,10 @@ Color Usage:
 """
 from PIL import ImageDraw, ImageFont
 
-from fonts import FONT_RIGHTEOUS, FONT_WEATHER_ICONS
 from services.weather import WeatherService
 from services.weather.openweathermap_service import OpenWeatherMapService
 from settings import get_settings
+from settings.fonts import FONT_RIGHTEOUS, FONT_WEATHER_ICONS
 from widgets.widget import Widget, WidgetRegion
 
 # Weather display fonts

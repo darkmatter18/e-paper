@@ -25,11 +25,9 @@ Layout:
     - Bottom tier (145px): Date with diamond separators
     - Scalloped borders at top and bottom edges
 """
-import os
-
 from PIL import ImageDraw, ImageFont
 
-from fonts import FONT_GEOMINI, FONT_HENNYPENNY
+from settings.fonts import FONT_GEOMINI, FONT_HENNYPENNY
 from utils.datetime_util import DateTimeUtil
 from widgets.widget import Widget, WidgetRegion
 

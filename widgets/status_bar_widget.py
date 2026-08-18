@@ -5,8 +5,8 @@ Displays WiFi signal strength and CPU temperature in a macOS-style menu bar.
 
 from PIL import ImageDraw, ImageFont
 
-from fonts import FONT_AWESOME, FONT_GEOMINI
 from services.system import SystemService
+from settings.fonts import FONT_AWESOME, FONT_GEOMINI
 from widgets.widget import Widget, WidgetRegion
 
 

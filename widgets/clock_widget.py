@@ -26,7 +26,7 @@ from datetime import datetime
 
 from PIL import ImageDraw, ImageFont
 
-from fonts import FONT_GEOMINI
+from settings.fonts import FONT_GEOMINI
 from utils import DateTimeUtil
 from widgets.widget import Widget, WidgetRegion
 

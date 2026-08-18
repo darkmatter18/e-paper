@@ -22,9 +22,9 @@ import logging
 
 from PIL import ImageDraw, ImageFont
 
-from fonts import FONT_GEOMINI, FONT_RIGHTEOUS, FONT_WEATHER_ICONS
 from services.weather import OpenWeatherMapService, WeatherService
 from settings import get_settings
+from settings.fonts import FONT_GEOMINI, FONT_RIGHTEOUS, FONT_WEATHER_ICONS
 from utils import DateTimeUtil
 from widgets.widget import Widget, WidgetRegion
 
@@ -87,7 +87,7 @@ class TodaysWeatherWidget(Widget):
         """
         try:
             weather = self.weather_service.get_weather(self.lat, self.lon)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error(f"Failed to fetch weather: {e}")
             self._draw_error(black_draw)
             return
