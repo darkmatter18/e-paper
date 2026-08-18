@@ -16,6 +16,7 @@ from settings import FONTS_DIR
 FONT_GEOMINI: Path = FONTS_DIR / "Geomini-VariableFont_wght.ttf"
 FONT_PLAYFAIR: Path = FONTS_DIR / "PlayfairDisplay-VariableFont_wght.ttf"
 FONT_PLAYFAIR_ITALIC: Path = FONTS_DIR / "PlayfairDisplay-Italic-VariableFont_wght.ttf"
+FONT_ORBITRON: Path = FONTS_DIR / "Orbitron-VariableFont_wght.ttf"
 
 # Regular fonts
 FONT_HENNYPENNY: Path = FONTS_DIR / "HennyPenny-Regular.ttf"
