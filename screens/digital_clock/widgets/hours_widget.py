@@ -38,7 +38,7 @@ class HoursWidget(Widget):
         return False
 
     def draw(self, black_draw: ImageDraw.ImageDraw, red_draw: ImageDraw.ImageDraw | None = None, **kwargs):
-        """Draw hours in red.
+        """Draw hours in red with fixed positioning.
 
         Args:
             black_draw: PIL ImageDraw for black channel (unused)
@@ -57,14 +57,16 @@ class HoursWidget(Widget):
         font = ImageFont.truetype(str(FONT_ORBITRON), font_size)
         font.set_variation_by_axes([900])
 
-        # Calculate dimensions for centering in region
-        bbox = red_draw.textbbox((0, 0), hours, font=font)
-        text_width = bbox[2] - bbox[0]
-        text_height = bbox[3] - bbox[1]
+        # Use fixed position based on widest possible content ("88")
+        # to prevent text shifting when hour changes (e.g., 09→10, 11→12).
+        # This ensures visual stability - digits stay in same position all day.
+        reference_bbox = red_draw.textbbox((0, 0), "88", font=font)
+        reference_width = reference_bbox[2] - reference_bbox[0]
+        reference_height = reference_bbox[3] - reference_bbox[1]
 
-        # Center in region
-        x = self.region.x + (self.region.width - text_width) // 2
-        y = self.region.y + (self.region.height - text_height) // 2
+        # Calculate fixed position (centered based on reference "88")
+        x = self.region.x + (self.region.width - reference_width) // 2
+        y = self.region.y + (self.region.height - reference_height) // 2
 
-        # Draw hours
+        # Draw hours at fixed position
         red_draw.text((x, y), hours, font=font, fill=0)
