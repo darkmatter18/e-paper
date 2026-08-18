@@ -9,22 +9,12 @@ Exports:
 from widgets.base import Widget, WidgetRegion
 
 # Shared widgets
-from widgets.shared import (
-    ClockWidget,
-    DateWidget,
-    QuoteWidget,
-    StatusBarWidget,
-    WeatherWidget,
-)
+from widgets.shared import StatusBarWidget
 
 __all__ = [
+    # Shared
+    "StatusBarWidget",
     # Base
     "Widget",
     "WidgetRegion",
-    # Shared
-    "ClockWidget",
-    "DateWidget",
-    "QuoteWidget",
-    "StatusBarWidget",
-    "WeatherWidget",
 ]
