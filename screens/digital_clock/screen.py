@@ -34,8 +34,8 @@ def create_digital_clock_screen() -> Screen:
             # E-paper controllers use byte (8-pixel) memory boundaries
             # Misaligned regions cause pixel shifts and border fading
             # All x-coordinates and widths MUST be divisible by 8
-            HoursWidget(WidgetRegion(x=16, y=168, width=344, height=176)),
+            HoursWidget(WidgetRegion(x=16, y=160, width=344, height=176)),
             ColonWidget(WidgetRegion(x=360, y=168, width=88, height=176)),
-            MinutesWidget(WidgetRegion(x=448, y=168, width=344, height=176)),
+            MinutesWidget(WidgetRegion(x=440, y=160, width=344, height=176)),
         ],
     )
