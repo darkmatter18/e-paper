@@ -71,11 +71,11 @@ class HoursWidget(Widget):
         font = ImageFont.truetype(str(FONT_ORBITRON), font_size)
         font.set_variation_by_axes([900])
 
-        # STEP 4: Calculate left-aligned position within the fixed bounding box
-        # Left anchor provides most consistent pixel positioning
-        x = self.region.x + 20  # 20px padding from left edge
+        # STEP 4: Calculate right-aligned position within the fixed bounding box
+        # Right anchor for hours (aligns towards the colon)
+        x = self.region.x + self.region.width - 20  # 20px padding from right edge
         y = self.region.y + 20  # 20px padding from top edge
 
-        # STEP 5: Draw hours left-aligned with left-top anchor
-        # Left alignment eliminates horizontal shifting completely
-        red_draw.text((x, y), hours, font=font, fill=0, anchor='lt')
+        # STEP 5: Draw hours right-aligned with right-top anchor
+        # Right alignment positions hours next to the colon
+        red_draw.text((x, y), hours, font=font, fill=0, anchor='rt')
