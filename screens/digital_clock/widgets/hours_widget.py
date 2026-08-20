@@ -71,10 +71,11 @@ class HoursWidget(Widget):
         font = ImageFont.truetype(str(FONT_ORBITRON), font_size)
         font.set_variation_by_axes([900])
 
-        # STEP 4: Calculate center position within the fixed bounding box
-        center_x = self.region.x + self.region.width // 2
-        center_y = self.region.y + self.region.height // 2
+        # STEP 4: Calculate left-aligned position within the fixed bounding box
+        # Left anchor provides most consistent pixel positioning
+        x = self.region.x + 20  # 20px padding from left edge
+        y = self.region.y + 20  # 20px padding from top edge
 
-        # STEP 5: Draw hours at center with middle-middle anchor
-        # Since we cleared the box first, any minor pixel shifts don't cause ghosting
-        red_draw.text((center_x, center_y), hours, font=font, fill=0, anchor='mm')
+        # STEP 5: Draw hours left-aligned with left-top anchor
+        # Left alignment eliminates horizontal shifting completely
+        red_draw.text((x, y), hours, font=font, fill=0, anchor='lt')

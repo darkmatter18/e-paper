@@ -49,9 +49,9 @@ class ColonWidget(Widget):
         font = ImageFont.truetype(str(FONT_ORBITRON), font_size)
         font.set_variation_by_axes([900])
 
-        # Calculate center position
-        center_x = self.region.x + self.region.width // 2
-        center_y = self.region.y + self.region.height // 2
+        # Calculate left-aligned position (colon is narrow, center it manually)
+        x = self.region.x + 20  # 20px padding from left
+        y = self.region.y + 20  # 20px padding from top
 
-        # Draw colon at center with middle-middle anchor
-        black_draw.text((center_x, center_y), ":", font=font, fill=0, anchor='mm')
+        # Draw colon left-aligned with left-top anchor
+        black_draw.text((x, y), ":", font=font, fill=0, anchor='lt')
