@@ -48,7 +48,7 @@ class HoursWidget(Widget):
         if not red_draw:
             return
 
-        # STEP 1: Draw fixed white rectangle to clear the region completely
+        # STEP 1: Draw fixed white rectangle with red border for testing
         # This ensures every refresh starts with a clean slate
         red_draw.rectangle(
             [
@@ -58,7 +58,8 @@ class HoursWidget(Widget):
                 self.region.y + self.region.height - 1,
             ],
             fill=255,  # White background
-            outline=None,
+            outline=0,  # Red border for testing/debugging
+            width=2,
         )
 
         # STEP 2: Get current time

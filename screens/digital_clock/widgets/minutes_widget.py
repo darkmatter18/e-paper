@@ -45,7 +45,7 @@ class MinutesWidget(Widget):
             red_draw: PIL ImageDraw for red channel (unused)
             **kwargs: Additional drawing parameters
         """
-        # STEP 1: Draw fixed white rectangle to clear the region completely
+        # STEP 1: Draw fixed white rectangle with black border for testing
         # This ensures every partial refresh starts with a clean slate
         black_draw.rectangle(
             [
@@ -55,7 +55,8 @@ class MinutesWidget(Widget):
                 self.region.y + self.region.height - 1,
             ],
             fill=255,  # White background
-            outline=None,
+            outline=0,  # Black border for testing/debugging
+            width=2,
         )
 
         # STEP 2: Get current time
