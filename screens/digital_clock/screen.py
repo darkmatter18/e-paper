@@ -30,10 +30,11 @@ def create_digital_clock_screen() -> Screen:
             # Status bar at top
             StatusBarWidget(WidgetRegion(x=0, y=0, width=800, height=30)),
 
-            # Time components - centered on screen
-            # Using generous regions, each widget centers its content within
-            HoursWidget(WidgetRegion(x=120, y=77, width=180, height=200)),
-            ColonWidget(WidgetRegion(x=357, y=65, width=80, height=200)),
-            MinutesWidget(WidgetRegion(x=500, y=77, width=180, height=200)),
+            # Time components - properly sized for 180pt Orbitron
+            # Text "88" = 300x130px, with 20px padding = 340x170px boxes
+            # Total width: 340 + 85 + 340 = 765px, centered in 800px screen
+            HoursWidget(WidgetRegion(x=18, y=170, width=340, height=170)),
+            ColonWidget(WidgetRegion(x=358, y=170, width=85, height=170)),
+            MinutesWidget(WidgetRegion(x=443, y=170, width=340, height=170)),
         ],
     )
